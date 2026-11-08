@@ -22,24 +22,24 @@ class StatusBadge extends StatelessWidget {
 
     switch (status) {
       case EligibilityStatus.eligible:
-        textColor = AppColors.primaryGreen;
-        bgColor = AppColors.greenLight;
-        borderColor = AppColors.primaryGreen.withOpacity(0.3);
+        textColor = AppColors.success;
+        bgColor = AppColors.successLight;
+        borderColor = AppColors.success.withValues(alpha: 0.3);
         break;
       case EligibilityStatus.potentiallyEligible:
         textColor = AppColors.warning;
         bgColor = AppColors.warningLight;
-        borderColor = AppColors.warning.withOpacity(0.3);
+        borderColor = AppColors.warning.withValues(alpha: 0.3);
         break;
       case EligibilityStatus.notEligible:
         textColor = AppColors.error;
         bgColor = AppColors.errorLight;
-        borderColor = AppColors.error.withOpacity(0.3);
+        borderColor = AppColors.error.withValues(alpha: 0.3);
         break;
       case EligibilityStatus.missingInformation:
-        textColor = AppColors.textMuted;
-        bgColor = AppColors.surface;
-        borderColor = AppColors.border;
+        textColor = AppColors.missingInfo;
+        bgColor = Theme.of(context).colorScheme.surface;
+        borderColor = Theme.of(context).colorScheme.outline;
         break;
     }
 
@@ -60,8 +60,8 @@ class StatusBadge extends StatelessWidget {
             width: 6,
             height: 6,
             decoration: BoxDecoration(
-              shape: BoxShape.circle,
               color: textColor,
+              shape: BoxShape.circle,
             ),
           ),
           const SizedBox(width: AppDimensions.space6),
@@ -69,8 +69,8 @@ class StatusBadge extends StatelessWidget {
             status.label,
             style: AppTypography.caption.copyWith(
               color: textColor,
+              fontSize: isCompact ? 10.5 : 12,
               fontWeight: FontWeight.w600,
-              fontSize: isCompact ? 11 : 12,
             ),
           ),
         ],
@@ -78,46 +78,3 @@ class StatusBadge extends StatelessWidget {
     );
   }
 }
-
-class VerifiedSourceChip extends StatelessWidget {
-  final String? authority;
-
-  const VerifiedSourceChip({
-    super.key,
-    this.authority,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppDimensions.space8,
-        vertical: AppDimensions.space2,
-      ),
-      decoration: BoxDecoration(
-        color: AppColors.secondaryBackground,
-        borderRadius: AppDimensions.roundedSmall,
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(
-            Icons.verified_outlined,
-            size: 12,
-            color: AppColors.primaryGreen,
-          ),
-          const SizedBox(width: AppDimensions.space4),
-          Text(
-            authority ?? 'Official Source',
-            style: AppTypography.caption.copyWith(
-              color: AppColors.textMuted,
-              fontSize: 11,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-

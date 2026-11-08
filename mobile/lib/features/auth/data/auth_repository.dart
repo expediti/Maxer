@@ -1,3 +1,6 @@
+import 'package:flutter/foundation.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../../core/supabase_client.dart';
 import '../domain/user_model.dart';
 
 abstract class AuthRepository {
@@ -10,91 +13,156 @@ abstract class AuthRepository {
   Future<UserModel?> getCurrentUser();
 }
 
-class MockAuthRepository implements AuthRepository {
-  UserModel? _currentUser;
-
-  MockAuthRepository() {
-    // Default demo user initialized for immediate interactive use
-    _currentUser = UserModel(
-      id: 'candidate-rexam-001',
-      email: 'arjun.sharma@rexam.in',
-      displayName: 'Arjun Sharma',
-      isGuest: false,
-      isEmailVerified: true,
-      createdAt: DateTime(2026, 1, 15),
-    );
-  }
+class SupabaseAuthRepository implements AuthRepository {
+  UserModel? _cachedGuestUser;
 
   @override
   Future<UserModel> signInWithEmail(String email, String password) async {
-    await Future.delayed(const Duration(milliseconds: 300));
-    if (email.trim().isEmpty || password.length < 6) {
-      throw Exception('Invalid email or password (minimum 6 characters required).');
+    final client = SupabaseConfig.client;
+    if (client == null) {
+      if (email.trim().isEmpty || password.length < 6) {
+        throw Exception('Invalid email or password (minimum 6 characters required).');
+      }
+      _cachedGuestUser = UserModel(
+        id: 'candidate-rexam-001',
+        email: email.trim(),
+        displayName: email.split('@').first.toUpperCase(),
+        createdAt: DateTime.now(),
+      );
+      return _cachedGuestUser!;
     }
-    _currentUser = UserModel(
-      id: 'candidate-rexam-001',
-      email: email.trim(),
-      displayName: email.split('@').first.toUpperCase(),
-      createdAt: DateTime.now(),
-    );
-    return _currentUser!;
+
+    try {
+      final res = await client.auth.signInWithPassword(
+        email: email.trim(),
+        password: password,
+      );
+      final user = res.user;
+      if (user == null) throw Exception('Authentication failed.');
+      return UserModel(
+        id: user.id,
+        email: user.email ?? email,
+        displayName: user.userMetadata?['full_name'] ?? email.split('@').first,
+        isEmailVerified: user.emailConfirmedAt != null,
+        createdAt: DateTime.tryParse(user.createdAt) ?? DateTime.now(),
+      );
+    } catch (e) {
+      throw Exception(e.toString().replaceFirst('Exception: ', '').replaceFirst('AuthException: ', ''));
+    }
   }
 
   @override
   Future<UserModel> signUpWithEmail(String email, String password, String fullName) async {
-    await Future.delayed(const Duration(milliseconds: 350));
-    if (email.trim().isEmpty || !email.contains('@')) {
-      throw Exception('Please enter a valid email address.');
+    final client = SupabaseConfig.client;
+    if (client == null) {
+      _cachedGuestUser = UserModel(
+        id: 'candidate-new-${DateTime.now().millisecondsSinceEpoch}',
+        email: email.trim(),
+        displayName: fullName.trim().isEmpty ? 'Candidate' : fullName.trim(),
+        createdAt: DateTime.now(),
+      );
+      return _cachedGuestUser!;
     }
-    if (password.length < 6) {
-      throw Exception('Password must be at least 6 characters.');
+
+    try {
+      final res = await client.auth.signUp(
+        email: email.trim(),
+        password: password,
+        data: {'full_name': fullName.trim()},
+      );
+      final user = res.user;
+      if (user == null) throw Exception('Registration could not be completed.');
+      return UserModel(
+        id: user.id,
+        email: user.email ?? email,
+        displayName: fullName.trim().isEmpty ? 'Candidate' : fullName.trim(),
+        isEmailVerified: user.emailConfirmedAt != null,
+        createdAt: DateTime.now(),
+      );
+    } catch (e) {
+      throw Exception(e.toString().replaceFirst('Exception: ', '').replaceFirst('AuthException: ', ''));
     }
-    _currentUser = UserModel(
-      id: 'candidate-new-${DateTime.now().millisecondsSinceEpoch}',
-      email: email.trim(),
-      displayName: fullName.trim().isEmpty ? 'Candidate' : fullName.trim(),
-      createdAt: DateTime.now(),
-    );
-    return _currentUser!;
   }
 
   @override
   Future<UserModel> signInWithGoogle() async {
-    await Future.delayed(const Duration(milliseconds: 400));
-    _currentUser = UserModel(
-      id: 'google-candidate-001',
-      email: 'arjun.google@rexam.in',
-      displayName: 'Arjun Sharma',
-      isGuest: false,
-      isEmailVerified: true,
-      createdAt: DateTime(2026, 2, 1),
-    );
-    return _currentUser!;
+    final client = SupabaseConfig.client;
+    if (client == null) {
+      _cachedGuestUser = UserModel(
+        id: 'google-candidate-001',
+        email: 'candidate.google@rexam.in',
+        displayName: 'Google Candidate',
+        createdAt: DateTime.now(),
+      );
+      return _cachedGuestUser!;
+    }
+
+    try {
+      await client.auth.signInWithOAuth(
+        OAuthProvider.google,
+        redirectTo: 'io.supabase.rexam://login-callback',
+      );
+      final user = client.auth.currentUser;
+      return UserModel(
+        id: user?.id ?? 'candidate-rexam-001',
+        email: user?.email ?? 'candidate@rexam.in',
+        displayName: user?.userMetadata?['full_name'] ?? 'Candidate',
+        isEmailVerified: true,
+        createdAt: DateTime.now(),
+      );
+    } catch (e) {
+      debugPrint('[REXAM] Google Auth Notice: $e');
+      throw Exception('Google sign-in could not be completed: $e');
+    }
   }
 
   @override
   Future<UserModel> signInAsGuest() async {
-    await Future.delayed(const Duration(milliseconds: 150));
-    _currentUser = UserModel.guest();
-    return _currentUser!;
+    _cachedGuestUser = UserModel.guest();
+    return _cachedGuestUser!;
   }
 
   @override
   Future<void> sendPasswordResetEmail(String email) async {
-    await Future.delayed(const Duration(milliseconds: 250));
-    if (email.trim().isEmpty || !email.contains('@')) {
-      throw Exception('Please enter a valid email address for password reset.');
+    final client = SupabaseConfig.client;
+    if (client != null) {
+      try {
+        await client.auth.resetPasswordForEmail(email.trim());
+      } catch (e) {
+        throw Exception(e.toString().replaceFirst('Exception: ', '').replaceFirst('AuthException: ', ''));
+      }
     }
   }
 
   @override
   Future<void> signOut() async {
-    await Future.delayed(const Duration(milliseconds: 100));
-    _currentUser = null;
+    _cachedGuestUser = null;
+    final client = SupabaseConfig.client;
+    if (client != null) {
+      try {
+        await client.auth.signOut();
+      } catch (e) {
+        debugPrint('[REXAM] Sign out notice: $e');
+      }
+    }
   }
 
   @override
   Future<UserModel?> getCurrentUser() async {
-    return _currentUser;
+    if (_cachedGuestUser != null) return _cachedGuestUser;
+    final client = SupabaseConfig.client;
+    if (client != null) {
+      final user = client.auth.currentUser;
+      if (user != null) {
+        return UserModel(
+          id: user.id,
+          email: user.email ?? '',
+          displayName: user.userMetadata?['full_name'] ?? user.email?.split('@').first,
+          isEmailVerified: user.emailConfirmedAt != null,
+          createdAt: DateTime.tryParse(user.createdAt) ?? DateTime.now(),
+        );
+      }
+    }
+    return null;
   }
 }

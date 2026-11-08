@@ -1,9 +1,13 @@
+// ignore_for_file: deprecated_member_use
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_dimensions.dart';
 import '../../../core/theme/app_typography.dart';
+import '../../../core/theme/theme_provider.dart';
+import '../../../core/supabase_client.dart';
 import '../../auth/presentation/providers/auth_provider.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
@@ -17,22 +21,17 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   bool _pushNotifications = true;
   bool _deadlineReminders = true;
   bool _corrigendaAlerts = true;
-  String _selectedLanguage = 'English';
+  bool _resultAnnouncements = true;
 
   void _showLegalDialog(String title, String content) {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: AppColors.surface,
-        shape: RoundedRectangleBorder(
-          borderRadius: AppDimensions.roundedDefault,
-          side: const BorderSide(color: AppColors.border),
-        ),
         title: Text(title, style: AppTypography.screenTitle),
         content: SingleChildScrollView(
           child: Text(
             content,
-            style: AppTypography.bodyMuted.copyWith(height: 1.45),
+            style: AppTypography.bodyMuted.copyWith(height: 1.5),
           ),
         ),
         actions: [
@@ -49,23 +48,19 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: AppColors.surface,
-        shape: RoundedRectangleBorder(
-          borderRadius: AppDimensions.roundedDefault,
-          side: const BorderSide(color: AppColors.border),
-        ),
-        title: Text('Sign Out', style: AppTypography.screenTitle),
-        content: Text('Are you sure you want to end your current session?', style: AppTypography.bodyMuted),
+        title: const Text('Sign Out'),
+        content: const Text('Are you sure you want to end your current session?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
             child: const Text('Cancel'),
           ),
           ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
             onPressed: () async {
               Navigator.of(ctx).pop();
               await ref.read(authProvider.notifier).signOut();
-              if (mounted) context.go('/auth');
+              if (mounted) context.go('/welcome');
             },
             child: const Text('Sign Out'),
           ),
@@ -76,8 +71,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final currentThemeMode = ref.watch(themeModeProvider);
+
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
         title: const Text('Settings'),
       ),
@@ -85,144 +83,223 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         child: ListView(
           padding: const EdgeInsets.all(AppDimensions.space16),
           children: [
-            // Preference Section
-            Text('APPLICATION PREFERENCES', style: AppTypography.label.copyWith(color: AppColors.primaryGreen)),
+            // Section 1: Appearance & Theme
+            _buildSectionHeader('Appearance & Theme'),
             const SizedBox(height: AppDimensions.space8),
             Container(
               decoration: BoxDecoration(
-                color: AppColors.surface,
+                color: theme.cardColor,
                 borderRadius: AppDimensions.roundedDefault,
-                border: Border.all(color: AppColors.border),
+                border: Border.all(color: theme.colorScheme.outline),
               ),
               child: Column(
                 children: [
-                  ListTile(
-                    leading: const Icon(Icons.dark_mode_outlined, size: 20, color: AppColors.primaryGreen),
-                    title: Text('Appearance', style: AppTypography.cardTitle),
-                    subtitle: Text('Rexam Deep Charcoal & Muted Green (System Default)', style: AppTypography.caption),
+                  RadioListTile<ThemeMode>(
+                    title: const Text('System Default'),
+                    subtitle: const Text('Match Android system display settings', style: TextStyle(fontSize: 12)),
+                    value: ThemeMode.system,
+                    groupValue: currentThemeMode,
+                    activeColor: AppColors.primaryBlue,
+                    onChanged: (mode) {
+                      if (mode != null) {
+                        ref.read(themeModeProvider.notifier).setThemeMode(mode);
+                      }
+                    },
                   ),
-                  const Divider(color: AppColors.border),
-                  ListTile(
-                    leading: const Icon(Icons.language_outlined, size: 20, color: AppColors.textMuted),
-                    title: Text('Display Language', style: AppTypography.cardTitle),
-                    trailing: DropdownButton<String>(
-                      value: _selectedLanguage,
-                      dropdownColor: AppColors.surface,
-                      underline: const SizedBox(),
-                      items: const [
-                        DropdownMenuItem(value: 'English', child: Text('English')),
-                        DropdownMenuItem(value: 'Hindi', child: Text('हिंदी (Hindi)')),
-                      ],
-                      onChanged: (val) {
-                        if (val != null) setState(() => _selectedLanguage = val);
-                      },
-                    ),
+                  Divider(color: theme.colorScheme.outline, height: 1),
+                  RadioListTile<ThemeMode>(
+                    title: const Text('Light Theme'),
+                    subtitle: const Text('Warm off-white background with dark charcoal typography', style: TextStyle(fontSize: 12)),
+                    value: ThemeMode.light,
+                    groupValue: currentThemeMode,
+                    activeColor: AppColors.primaryBlue,
+                    onChanged: (mode) {
+                      if (mode != null) {
+                        ref.read(themeModeProvider.notifier).setThemeMode(mode);
+                      }
+                    },
                   ),
-                ],
-              ),
-            ),
-            const SizedBox(height: AppDimensions.space20),
-
-            // Notification Controls
-            Text('NOTIFICATIONS & ALERTS', style: AppTypography.label.copyWith(color: AppColors.primaryGreen)),
-            const SizedBox(height: AppDimensions.space8),
-            Container(
-              decoration: BoxDecoration(
-                color: AppColors.surface,
-                borderRadius: AppDimensions.roundedDefault,
-                border: Border.all(color: AppColors.border),
-              ),
-              child: Column(
-                children: [
-                  SwitchListTile(
-                    activeThumbColor: AppColors.primaryGreen,
-                    title: Text('Push Notifications', style: AppTypography.cardTitle),
-                    subtitle: Text('Receive real-time alerts on your device', style: AppTypography.caption),
-                    value: _pushNotifications,
-                    onChanged: (val) => setState(() => _pushNotifications = val),
-                  ),
-                  const Divider(color: AppColors.border),
-                  SwitchListTile(
-                    activeThumbColor: AppColors.primaryGreen,
-                    title: Text('Urgent Deadline Reminders', style: AppTypography.cardTitle),
-                    subtitle: Text('Notifications 48 hours and 24 hours prior to portal closure', style: AppTypography.caption),
-                    value: _deadlineReminders,
-                    onChanged: (val) => setState(() => _deadlineReminders = val),
-                  ),
-                  const Divider(color: AppColors.border),
-                  SwitchListTile(
-                    activeThumbColor: AppColors.primaryGreen,
-                    title: Text('Official Corrigenda & Amendments', style: AppTypography.cardTitle),
-                    subtitle: Text('Instant updates when exam dates or criteria change', style: AppTypography.caption),
-                    value: _corrigendaAlerts,
-                    onChanged: (val) => setState(() => _corrigendaAlerts = val),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: AppDimensions.space20),
-
-            // Legal & About
-            Text('LEGAL & PLATFORM INTEGRITY', style: AppTypography.label.copyWith(color: AppColors.primaryGreen)),
-            const SizedBox(height: AppDimensions.space8),
-            Container(
-              decoration: BoxDecoration(
-                color: AppColors.surface,
-                borderRadius: AppDimensions.roundedDefault,
-                border: Border.all(color: AppColors.border),
-              ),
-              child: Column(
-                children: [
-                  ListTile(
-                    leading: const Icon(Icons.policy_outlined, size: 20, color: AppColors.textMuted),
-                    title: Text('Privacy Policy', style: AppTypography.cardTitle),
-                    trailing: const Icon(Icons.chevron_right, size: 18),
-                    onTap: () => _showLegalDialog(
-                      'Privacy Policy',
-                      'Rexam does not sell candidate data. Personal attributes entered in your profile are utilized strictly for deterministic eligibility checks and personalized opportunity matching. All sensitive tokens are securely stored locally using secure hardware storage, with PostgreSQL Row-Level Security ensuring multi-tenant isolation.',
-                    ),
-                  ),
-                  const Divider(color: AppColors.border),
-                  ListTile(
-                    leading: const Icon(Icons.gavel_outlined, size: 20, color: AppColors.textMuted),
-                    title: Text('Terms of Service & Disclaimer', style: AppTypography.cardTitle),
-                    trailing: const Icon(Icons.chevron_right, size: 18),
-                    onTap: () => _showLegalDialog(
-                      'Terms of Service & Disclaimer',
-                      'Rexam is an independent discovery and eligibility intelligence platform. We do not represent any government agency, PSU, or recruiting body. We do not submit application forms on behalf of candidates. Users must verify all critical dates, eligibility clauses, and instructions against the official notification PDF before submitting applications.',
-                    ),
-                  ),
-                  const Divider(color: AppColors.border),
-                  ListTile(
-                    leading: const Icon(Icons.support_agent_outlined, size: 20, color: AppColors.textMuted),
-                    title: Text('Contact Support & Source Suggestions', style: AppTypography.cardTitle),
-                    trailing: const Icon(Icons.chevron_right, size: 18),
-                    onTap: () => _showLegalDialog(
-                      'Support & Official Source Intake',
-                      'For support, reporting broken official links, or suggesting official state gazettes and university recruitment sources, contact us at official@rexam.app.',
-                    ),
-                  ),
-                  const Divider(color: AppColors.border),
-                  ListTile(
-                    leading: const Icon(Icons.info_outline, size: 20, color: AppColors.textMuted),
-                    title: Text('About Rexam', style: AppTypography.cardTitle),
-                    subtitle: Text('Version 1.0.0-prod (Build 2026.11)', style: AppTypography.caption),
+                  Divider(color: theme.colorScheme.outline, height: 1),
+                  RadioListTile<ThemeMode>(
+                    title: const Text('Dark Theme'),
+                    subtitle: const Text('Deep slate background with restrained borders', style: TextStyle(fontSize: 12)),
+                    value: ThemeMode.dark,
+                    groupValue: currentThemeMode,
+                    activeColor: AppColors.primaryBlue,
+                    onChanged: (mode) {
+                      if (mode != null) {
+                        ref.read(themeModeProvider.notifier).setThemeMode(mode);
+                      }
+                    },
                   ),
                 ],
               ),
             ),
             const SizedBox(height: AppDimensions.space24),
 
-            // Sign out
-            OutlinedButton.icon(
-              icon: const Icon(Icons.logout, size: 18, color: AppColors.error),
-              label: Text('Sign Out of Rexam', style: AppTypography.button.copyWith(color: AppColors.error)),
+            // Section 2: Notification Preferences
+            _buildSectionHeader('Notification Preferences'),
+            const SizedBox(height: AppDimensions.space8),
+            Container(
+              decoration: BoxDecoration(
+                color: theme.cardColor,
+                borderRadius: AppDimensions.roundedDefault,
+                border: Border.all(color: theme.colorScheme.outline),
+              ),
+              child: Column(
+                children: [
+                  SwitchListTile(
+                    title: const Text('Push Notifications', style: TextStyle(fontWeight: FontWeight.w600)),
+                    subtitle: const Text('Receive on-device alert dispatches', style: TextStyle(fontSize: 12)),
+                    value: _pushNotifications,
+                    activeTrackColor: AppColors.primaryBlue,
+                    activeThumbColor: Colors.white,
+                    onChanged: (val) => setState(() => _pushNotifications = val),
+                  ),
+                  Divider(color: theme.colorScheme.outline, height: 1),
+                  SwitchListTile(
+                    title: const Text('Upcoming Deadline Reminders'),
+                    subtitle: const Text('Alert 7 days, 3 days, and 24 hours prior to application close', style: TextStyle(fontSize: 12)),
+                    value: _deadlineReminders,
+                    activeTrackColor: AppColors.primaryBlue,
+                    activeThumbColor: Colors.white,
+                    onChanged: (val) => setState(() => _deadlineReminders = val),
+                  ),
+                  Divider(color: theme.colorScheme.outline, height: 1),
+                  SwitchListTile(
+                    title: const Text('Official Corrigenda & Addenda'),
+                    subtitle: const Text('Immediate alert when vacancy rules or exam dates change', style: TextStyle(fontSize: 12)),
+                    value: _corrigendaAlerts,
+                    activeTrackColor: AppColors.primaryBlue,
+                    activeThumbColor: Colors.white,
+                    onChanged: (val) => setState(() => _corrigendaAlerts = val),
+                  ),
+                  Divider(color: theme.colorScheme.outline, height: 1),
+                  SwitchListTile(
+                    title: const Text('Result & Admit Card Announcements'),
+                    subtitle: const Text('Alerts when hall tickets and merit lists are released', style: TextStyle(fontSize: 12)),
+                    value: _resultAnnouncements,
+                    activeTrackColor: AppColors.primaryBlue,
+                    activeThumbColor: Colors.white,
+                    onChanged: (val) => setState(() => _resultAnnouncements = val),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: AppDimensions.space24),
+
+            // Section 3: Supabase Backend Status
+            _buildSectionHeader('Backend Infrastructure'),
+            const SizedBox(height: AppDimensions.space8),
+            Container(
+              padding: const EdgeInsets.all(AppDimensions.space16),
+              decoration: BoxDecoration(
+                color: theme.cardColor,
+                borderRadius: AppDimensions.roundedDefault,
+                border: Border.all(color: theme.colorScheme.outline),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        width: 8,
+                        height: 8,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: SupabaseConfig.isInitialized ? AppColors.success : AppColors.warning,
+                        ),
+                      ),
+                      const SizedBox(width: AppDimensions.space8),
+                      Text(
+                        SupabaseConfig.isInitialized ? 'Supabase Connected' : 'Supabase Connecting',
+                        style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    'Endpoint: ${SupabaseConfig.supabaseUrl}',
+                    style: AppTypography.caption.copyWith(fontSize: 11),
+                  ),
+                  const SizedBox(height: 4),
+                  const Text(
+                    'All candidate queries are authenticated and protected under Row Level Security (RLS).',
+                    style: TextStyle(fontSize: 11, color: AppColors.success),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: AppDimensions.space24),
+
+            // Section 4: Legal & About
+            _buildSectionHeader('About & Legal'),
+            const SizedBox(height: AppDimensions.space8),
+            Container(
+              decoration: BoxDecoration(
+                color: theme.cardColor,
+                borderRadius: AppDimensions.roundedDefault,
+                border: Border.all(color: theme.colorScheme.outline),
+              ),
+              child: Column(
+                children: [
+                  ListTile(
+                    title: const Text('Terms of Service'),
+                    trailing: const Icon(Icons.chevron_right, size: 20),
+                    onTap: () => _showLegalDialog(
+                      'Terms of Service',
+                      '1. REXAM aggregates officially announced examinations and job recruitments across Indian central, state, and PSU authorities.\n\n2. Information provided is for candidate guidance. Candidates must independently verify all eligibility requirements and submission deadlines against official gazettes before paying application fees.\n\n3. Rexam is not an examination conducting body and does not issue admit cards or admit candidates to examination venues.',
+                    ),
+                  ),
+                  Divider(color: theme.colorScheme.outline, height: 1),
+                  ListTile(
+                    title: const Text('Privacy Policy'),
+                    trailing: const Icon(Icons.chevron_right, size: 20),
+                    onTap: () => _showLegalDialog(
+                      'Privacy Policy',
+                      '1. Demographic and educational attributes stored in REXAM are used strictly for deterministic rule checking and notification delivery.\n\n2. We do not sell or monetize personal candidate data.\n\n3. All data stored in Supabase uses PostgreSQL Row Level Security restricting profile access solely to your authenticated account.',
+                    ),
+                  ),
+                  Divider(color: theme.colorScheme.outline, height: 1),
+                  ListTile(
+                    title: const Text('About Rexam'),
+                    subtitle: const Text('Version 1.0.0+1 (Production Release)'),
+                    trailing: const Icon(Icons.info_outline, size: 20),
+                    onTap: () => _showLegalDialog(
+                      'About REXAM',
+                      'REXAM: Indian Examination & Opportunity Intelligence\n\nBuilt to empower Indian students and job aspirants to discover opportunities, verify statutory eligibility, track application stages, and never miss a deadline.\n\nEngine: Deterministic Rule Validator\nDatabase: Supabase PostgreSQL (RLS Enforced)\nTarget: All India Recruitment & Admissions',
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: AppDimensions.space24),
+
+            // Sign Out
+            ElevatedButton.icon(
               onPressed: _showLogoutDialog,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.error,
+                foregroundColor: Colors.white,
+              ),
+              icon: const Icon(Icons.logout, size: 18),
+              label: const Text('Sign Out'),
             ),
             const SizedBox(height: AppDimensions.space32),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildSectionHeader(String title) {
+    return Row(
+      children: [
+        Container(width: 3, height: 16, color: AppColors.primaryBlue),
+        const SizedBox(width: AppDimensions.space8),
+        Text(title, style: AppTypography.sectionHeader),
+      ],
     );
   }
 }

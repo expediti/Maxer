@@ -5,7 +5,7 @@ import 'package:rexam/features/opportunities/data/opportunity_repository.dart';
 import 'package:rexam/features/profile/presentation/providers/profile_provider.dart';
 
 final opportunityRepositoryProvider = Provider<OpportunityRepository>((ref) {
-  return MockOpportunityRepository();
+  return SupabaseOpportunityRepository();
 });
 
 final opportunityFilterProvider = StateProvider<OpportunityFilter>((ref) {
@@ -23,6 +23,18 @@ final closingSoonOpportunitiesProvider = FutureProvider<List<Opportunity>>((ref)
   return repo.getClosingSoonOpportunities(limit: 6);
 });
 
+final recentlyUpdatedOpportunitiesProvider = FutureProvider<List<Opportunity>>((ref) async {
+  final repo = ref.watch(opportunityRepositoryProvider);
+  final all = await repo.getOpportunities();
+  final list = List<Opportunity>.from(all)
+    ..sort((a, b) {
+      final aTime = a.lastVerifiedAt ?? DateTime(2026);
+      final bTime = b.lastVerifiedAt ?? DateTime(2026);
+      return bTime.compareTo(aTime);
+    });
+  return list.take(5).toList();
+});
+
 final recommendedOpportunitiesProvider = FutureProvider<List<Opportunity>>((ref) async {
   final repo = ref.watch(opportunityRepositoryProvider);
   final profileAsync = ref.watch(profileProvider);
@@ -30,7 +42,7 @@ final recommendedOpportunitiesProvider = FutureProvider<List<Opportunity>>((ref)
   return profileAsync.when(
     data: (profile) => repo.getRecommendedOpportunities(profile),
     loading: () => repo.getOpportunities(),
-    error: (_, __) => repo.getOpportunities(),
+    error: (err, stack) => repo.getOpportunities(),
   );
 });
 

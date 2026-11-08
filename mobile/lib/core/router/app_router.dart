@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../features/auth/presentation/splash_screen.dart';
+import '../../features/auth/presentation/welcome_screen.dart';
 import '../../features/auth/presentation/onboarding_screen.dart';
 import '../../features/auth/presentation/auth_screen.dart';
 import '../../features/profile/presentation/profile_wizard_screen.dart';
@@ -30,6 +31,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const SplashScreen(),
       ),
       GoRoute(
+        path: '/welcome',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const WelcomeScreen(),
+      ),
+      GoRoute(
         path: '/onboarding',
         parentNavigatorKey: _rootNavigatorKey,
         builder: (context, state) => const OnboardingScreen(),
@@ -43,11 +49,6 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/profile/wizard',
         parentNavigatorKey: _rootNavigatorKey,
         builder: (context, state) => const ProfileWizardScreen(),
-      ),
-      GoRoute(
-        path: '/explorer',
-        parentNavigatorKey: _rootNavigatorKey,
-        builder: (context, state) => const ExplorerScreen(),
       ),
       GoRoute(
         path: '/opportunities/:id',
@@ -66,12 +67,22 @@ final routerProvider = Provider<GoRouter>((ref) {
         },
       ),
       GoRoute(
+        path: '/alerts',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const AlertsScreen(),
+      ),
+      GoRoute(
         path: '/settings',
         parentNavigatorKey: _rootNavigatorKey,
         builder: (context, state) => const SettingsScreen(),
       ),
 
-      // Bottom Navigation Shell
+      // Bottom Navigation Shell with 5 core tabs:
+      // 1. Home (/discover)
+      // 2. Explore (/explorer)
+      // 3. Saved (/saved)
+      // 4. Applications (/applications)
+      // 5. Profile (/profile)
       ShellRoute(
         navigatorKey: _shellNavigatorKey,
         builder: (context, state, child) => MainScaffold(child: child),
@@ -79,6 +90,10 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/discover',
             builder: (context, state) => const DiscoverScreen(),
+          ),
+          GoRoute(
+            path: '/explorer',
+            builder: (context, state) => const ExplorerScreen(),
           ),
           GoRoute(
             path: '/saved',
@@ -89,10 +104,6 @@ final routerProvider = Provider<GoRouter>((ref) {
             builder: (context, state) => const ApplicationsScreen(),
           ),
           GoRoute(
-            path: '/alerts',
-            builder: (context, state) => const AlertsScreen(),
-          ),
-          GoRoute(
             path: '/profile',
             builder: (context, state) => const ProfileScreen(),
           ),
@@ -101,4 +112,3 @@ final routerProvider = Provider<GoRouter>((ref) {
     ],
   );
 });
-

@@ -221,7 +221,7 @@ class DeterministicEligibilityRepository implements EligibilityRepository {
         candidate.socialCategory.toUpperCase().contains('ST') ||
         candidate.isPwBD;
 
-    if (isFeeExempt && examination.feeExemptions != null) {
+    if (isFeeExempt && examination.feeExemptions.isNotEmpty) {
       applicableRelaxations.add('Full Application Fee Exemption (₹${examination.applicationFee?.toInt() ?? 0} waived)');
     }
 

@@ -23,7 +23,8 @@ class DateFormatter {
   }
 
   /// Calculates days remaining to a deadline
-  static String daysRemaining(DateTime deadline) {
+  static String daysRemaining(DateTime? deadline) {
+    if (deadline == null) return 'No deadline';
     final now = DateTime.now();
     final difference = deadline.difference(now).inDays;
     if (difference < 0) {
@@ -39,7 +40,10 @@ class DateFormatter {
     }
   }
 
-  static bool isClosingSoon(DateTime deadline, {int thresholdDays = 7}) {
+  static String formatDeadline(DateTime? deadline) => daysRemaining(deadline);
+
+  static bool isClosingSoon(DateTime? deadline, {int thresholdDays = 7}) {
+    if (deadline == null) return false;
     final now = DateTime.now();
     final diff = deadline.difference(now).inDays;
     return diff >= 0 && diff <= thresholdDays;

@@ -44,6 +44,7 @@ enum EligibilityStatus {
 
 class Examination {
   final String id;
+  final String slug;
   final String organisationId;
   final String? sourceId;
   final String title;
@@ -85,6 +86,7 @@ class Examination {
 
   const Examination({
     required this.id,
+    this.slug = '',
     this.organisationId = '',
     this.sourceId,
     required this.title,
@@ -125,10 +127,38 @@ class Examination {
     this.uncertainFields = const [],
   });
 
-  factory Examination.fromSupabase(Map<String, dynamic> json, {Map<String, dynamic>? datesJson, Map<String, dynamic>? rulesJson, Map<String, dynamic>? orgJson}) {
-    final dates = datesJson ?? json['examination_dates'] as Map<String, dynamic>? ?? {};
-    final rules = rulesJson ?? json['eligibility_rules'] as Map<String, dynamic>? ?? {};
-    final org = orgJson ?? json['organisations'] as Map<String, dynamic>? ?? {};
+  factory Examination.fromSupabase(
+    Map<String, dynamic> json, {
+    Map<String, dynamic>? datesJson,
+    Map<String, dynamic>? rulesJson,
+    Map<String, dynamic>? orgJson,
+  }) {
+    Map<String, dynamic> dates = {};
+    if (datesJson != null) {
+      dates = datesJson;
+    } else if (json['examination_dates'] is List && (json['examination_dates'] as List).isNotEmpty) {
+      dates = Map<String, dynamic>.from((json['examination_dates'] as List).first as Map);
+    } else if (json['examination_dates'] is Map) {
+      dates = Map<String, dynamic>.from(json['examination_dates'] as Map);
+    }
+
+    Map<String, dynamic> rules = {};
+    if (rulesJson != null) {
+      rules = rulesJson;
+    } else if (json['eligibility_rules'] is List && (json['eligibility_rules'] as List).isNotEmpty) {
+      rules = Map<String, dynamic>.from((json['eligibility_rules'] as List).first as Map);
+    } else if (json['eligibility_rules'] is Map) {
+      rules = Map<String, dynamic>.from(json['eligibility_rules'] as Map);
+    }
+
+    Map<String, dynamic> org = {};
+    if (orgJson != null) {
+      org = orgJson;
+    } else if (json['organisations'] is List && (json['organisations'] as List).isNotEmpty) {
+      org = Map<String, dynamic>.from((json['organisations'] as List).first as Map);
+    } else if (json['organisations'] is Map) {
+      org = Map<String, dynamic>.from(json['organisations'] as Map);
+    }
 
     DateTime? closingDate;
     if (dates['application_closing_date'] != null) {
@@ -149,6 +179,7 @@ class Examination {
 
     return Examination(
       id: json['id']?.toString() ?? '',
+      slug: json['slug']?.toString() ?? '',
       organisationId: json['organisation_id']?.toString() ?? '',
       sourceId: json['source_id']?.toString(),
       title: json['name']?.toString() ?? '',

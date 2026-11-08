@@ -4,13 +4,13 @@ from pydantic import Field
 
 class Settings(BaseSettings):
     # Supabase credentials (Service role key for administrative data ingestion)
-    SUPABASE_URL: str = Field(default="https://demo-project.supabase.co")
-    SUPABASE_SERVICE_ROLE_KEY: str = Field(default="demo-service-role-key")
+    SUPABASE_URL: str = Field(default=os.getenv("SUPABASE_URL", ""))
+    SUPABASE_SERVICE_ROLE_KEY: str = Field(default=os.getenv("SUPABASE_SERVICE_ROLE_KEY", ""))
 
     # Cloudflare Workers AI configuration
-    CLOUDFLARE_ACCOUNT_ID: str = Field(default="")
-    CLOUDFLARE_API_TOKEN: str = Field(default="")
-    CLOUDFLARE_AI_MODEL: str = Field(default="@cf/meta/llama-3.1-8b-instruct")
+    CLOUDFLARE_ACCOUNT_ID: str = Field(default=os.getenv("CLOUDFLARE_ACCOUNT_ID", ""))
+    CLOUDFLARE_API_TOKEN: str = Field(default=os.getenv("CLOUDFLARE_API_TOKEN", ""))
+    CLOUDFLARE_AI_MODEL: str = Field(default=os.getenv("CLOUDFLARE_AI_MODEL", "@cf/meta/llama-3.1-8b-instruct"))
 
     # Crawler & Rate Limiting
     CRAWLER_USER_AGENT: str = Field(
@@ -25,10 +25,9 @@ class Settings(BaseSettings):
     ENVIRONMENT: str = Field(default="development")
 
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=(".env", "engine/.env"),
         env_file_encoding="utf-8",
         extra="ignore",
     )
 
 settings = Settings()
-

@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_dimensions.dart';
 import '../../../core/theme/app_typography.dart';
-import '../../alerts/presentation/providers/alerts_provider.dart';
 
 class MainScaffold extends ConsumerWidget {
   final Widget child;
@@ -14,9 +13,9 @@ class MainScaffold extends ConsumerWidget {
   int _calculateSelectedIndex(BuildContext context) {
     final location = GoRouterState.of(context).matchedLocation;
     if (location.startsWith('/discover')) return 0;
-    if (location.startsWith('/saved')) return 1;
-    if (location.startsWith('/applications')) return 2;
-    if (location.startsWith('/alerts')) return 3;
+    if (location.startsWith('/explorer')) return 1;
+    if (location.startsWith('/saved')) return 2;
+    if (location.startsWith('/applications')) return 3;
     if (location.startsWith('/profile')) return 4;
     return 0;
   }
@@ -27,13 +26,13 @@ class MainScaffold extends ConsumerWidget {
         context.go('/discover');
         break;
       case 1:
-        context.go('/saved');
+        context.go('/explorer');
         break;
       case 2:
-        context.go('/applications');
+        context.go('/saved');
         break;
       case 3:
-        context.go('/alerts');
+        context.go('/applications');
         break;
       case 4:
         context.go('/profile');
@@ -43,18 +42,29 @@ class MainScaffold extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     final selectedIndex = _calculateSelectedIndex(context);
-    final unreadAlerts = ref.watch(unreadAlertsCountProvider);
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: theme.scaffoldBackgroundColor,
       body: child,
       bottomNavigationBar: Container(
-        decoration: const BoxDecoration(
-          color: AppColors.secondaryBackground,
+        decoration: BoxDecoration(
+          color: isDark ? AppColors.darkSecondaryBackground : Colors.white,
           border: Border(
-            top: BorderSide(color: AppColors.border, width: 1.0),
+            top: BorderSide(
+              color: isDark ? AppColors.darkBorder : AppColors.lightBorder,
+              width: 1.0,
+            ),
           ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.04),
+              blurRadius: 8,
+              offset: const Offset(0, -2),
+            ),
+          ],
         ),
         child: SafeArea(
           child: SizedBox(
@@ -66,41 +76,40 @@ class MainScaffold extends ConsumerWidget {
                   context: context,
                   index: 0,
                   currentIndex: selectedIndex,
-                  icon: Icons.search_outlined,
-                  activeIcon: Icons.search,
-                  label: 'Discover',
+                  icon: Icons.home_outlined,
+                  activeIcon: Icons.home_rounded,
+                  label: 'Home',
                 ),
                 _buildNavItem(
                   context: context,
                   index: 1,
                   currentIndex: selectedIndex,
-                  icon: Icons.bookmark_border_outlined,
-                  activeIcon: Icons.bookmark,
-                  label: 'Saved',
+                  icon: Icons.explore_outlined,
+                  activeIcon: Icons.explore_rounded,
+                  label: 'Explore',
                 ),
                 _buildNavItem(
                   context: context,
                   index: 2,
                   currentIndex: selectedIndex,
-                  icon: Icons.assignment_outlined,
-                  activeIcon: Icons.assignment,
-                  label: 'Applications',
+                  icon: Icons.bookmark_border_rounded,
+                  activeIcon: Icons.bookmark_rounded,
+                  label: 'Saved',
                 ),
                 _buildNavItem(
                   context: context,
                   index: 3,
                   currentIndex: selectedIndex,
-                  icon: Icons.notifications_none_outlined,
-                  activeIcon: Icons.notifications,
-                  label: 'Alerts',
-                  badgeCount: unreadAlerts,
+                  icon: Icons.assignment_outlined,
+                  activeIcon: Icons.assignment_rounded,
+                  label: 'Applications',
                 ),
                 _buildNavItem(
                   context: context,
                   index: 4,
                   currentIndex: selectedIndex,
-                  icon: Icons.person_outline,
-                  activeIcon: Icons.person,
+                  icon: Icons.person_outline_rounded,
+                  activeIcon: Icons.person_rounded,
                   label: 'Profile',
                 ),
               ],
@@ -118,58 +127,35 @@ class MainScaffold extends ConsumerWidget {
     required IconData icon,
     required IconData activeIcon,
     required String label,
-    int badgeCount = 0,
   }) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     final isSelected = index == currentIndex;
+
+    final activeColor = AppColors.primaryBlue;
+    final inactiveColor = isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted;
 
     return InkWell(
       onTap: () => _onItemTapped(index, context),
+      borderRadius: AppDimensions.roundedSmall,
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: AppDimensions.space8, vertical: AppDimensions.space4),
+        padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 6.0),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Stack(
-              clipBehavior: Clip.none,
-              children: [
-                Icon(
-                  isSelected ? activeIcon : icon,
-                  size: 20,
-                  color: isSelected ? AppColors.primaryGreen : AppColors.textMuted,
-                ),
-                if (badgeCount > 0)
-                  Positioned(
-                    right: -6,
-                    top: -4,
-                    child: Container(
-                      padding: const EdgeInsets.all(2),
-                      decoration: const BoxDecoration(
-                        color: AppColors.primaryGreen,
-                        shape: BoxShape.circle,
-                      ),
-                      constraints: const BoxConstraints(minWidth: 12, minHeight: 12),
-                      child: Center(
-                        child: Text(
-                          '$badgeCount',
-                          style: const TextStyle(
-                            color: AppColors.background,
-                            fontSize: 8,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-              ],
+            Icon(
+              isSelected ? activeIcon : icon,
+              size: 22,
+              color: isSelected ? activeColor : inactiveColor,
             ),
-            const SizedBox(height: AppDimensions.space4),
+            const SizedBox(height: 4),
             Text(
               label,
               style: AppTypography.caption.copyWith(
+                color: isSelected ? activeColor : inactiveColor,
+                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
                 fontSize: 11,
-                color: isSelected ? AppColors.primaryGreen : AppColors.textMuted,
-                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
               ),
             ),
           ],
@@ -178,4 +164,3 @@ class MainScaffold extends ConsumerWidget {
     );
   }
 }
-

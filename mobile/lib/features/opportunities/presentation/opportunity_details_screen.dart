@@ -2,12 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:intl/intl.dart';
 import 'package:rexam/core/constants/app_colors.dart';
 import 'package:rexam/core/constants/app_dimensions.dart';
 import 'package:rexam/core/theme/app_typography.dart';
 import 'package:rexam/core/utils/currency_formatter.dart';
 import 'package:rexam/core/utils/date_formatter.dart';
-import 'package:rexam/features/applications/domain/application_tracker.dart';
+import 'package:rexam/core/widgets/empty_state.dart';
+import 'package:rexam/models/application_tracker.dart';
 import 'package:rexam/features/applications/presentation/providers/applications_provider.dart';
 import 'package:rexam/features/saved/presentation/providers/saved_provider.dart';
 import 'package:rexam/features/opportunities/domain/opportunity.dart';
@@ -47,11 +49,6 @@ class OpportunityDetailsScreen extends ConsumerWidget {
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) => AlertDialog(
-          backgroundColor: AppColors.surface,
-          shape: RoundedRectangleBorder(
-            borderRadius: AppDimensions.roundedDefault,
-            side: const BorderSide(color: AppColors.border),
-          ),
           title: Text('Track Application Status', style: AppTypography.screenTitle),
           content: SingleChildScrollView(
             child: Column(
@@ -65,7 +62,7 @@ class OpportunityDetailsScreen extends ConsumerWidget {
                 const SizedBox(height: AppDimensions.space16),
 
                 DropdownButtonFormField<ApplicationStatus>(
-                  value: selectedStatus,
+                  initialValue: selectedStatus,
                   decoration: const InputDecoration(labelText: 'Current Stage'),
                   items: ApplicationStatus.values.map((status) {
                     return DropdownMenuItem(
@@ -112,7 +109,10 @@ class OpportunityDetailsScreen extends ConsumerWidget {
                     );
                 Navigator.of(ctx).pop();
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Application tracker updated.')),
+                  SnackBar(
+                    content: Text('Tracking updated: ${selectedStatus.label}'),
+                    backgroundColor: AppColors.success,
+                  ),
                 );
               },
               child: const Text('Save Progress'),
@@ -125,324 +125,328 @@ class OpportunityDetailsScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     final opportunityAsync = ref.watch(opportunityDetailProvider(opportunityId));
     final savedList = ref.watch(savedProvider);
-    final isSaved = savedList.any((o) => o.id == opportunityId);
-    final tracker = ref.watch(applicationsProvider.notifier).getByOpportunityId(opportunityId);
+    final isSaved = savedList.any((o) => o.id == opportunityId || o.slug == opportunityId);
 
     return opportunityAsync.when(
-      data: (opp) {
-        if (opp == null) {
+      data: (opportunity) {
+        if (opportunity == null) {
           return Scaffold(
-            appBar: AppBar(title: const Text('Not Found')),
-            body: const Center(child: Text('Opportunity record not found.')),
+            appBar: AppBar(),
+            body: const EmptyStateView(
+              icon: Icons.search_off_rounded,
+              title: 'Examination Not Found',
+              description: 'The requested opportunity record could not be found or may have been archived.',
+            ),
           );
         }
 
+        final deadline = opportunity.applicationDeadline;
+
         return Scaffold(
-          backgroundColor: AppColors.background,
+          backgroundColor: theme.scaffoldBackgroundColor,
           appBar: AppBar(
-            title: Text(opp.organisation, maxLines: 1, overflow: TextOverflow.ellipsis),
+            title: Text(opportunity.organisation, style: const TextStyle(fontSize: 16)),
             actions: [
               IconButton(
                 icon: Icon(
-                  isSaved ? Icons.bookmark : Icons.bookmark_border,
-                  color: isSaved ? AppColors.primaryGreen : AppColors.textMain,
+                  isSaved ? Icons.bookmark_rounded : Icons.bookmark_border_rounded,
+                  color: isSaved ? AppColors.primaryBlue : null,
                 ),
-                onPressed: () => ref.read(savedProvider.notifier).toggleSave(opp),
-              ),
-              IconButton(
-                icon: const Icon(Icons.share_outlined),
+                tooltip: isSaved ? 'Bookmarked' : 'Save Opportunity',
                 onPressed: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Share link copied: ${opp.officialApplicationUrl}')),
-                  );
+                  ref.read(savedProvider.notifier).toggleSave(opportunity);
                 },
               ),
             ],
           ),
-          body: SafeArea(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(AppDimensions.space16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Verification provenance banner
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: AppDimensions.space12, vertical: AppDimensions.space8),
-                    decoration: BoxDecoration(
-                      color: AppColors.surface,
-                      borderRadius: AppDimensions.roundedSmall,
-                      border: Border.all(color: AppColors.border),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.verified_outlined, size: 16, color: AppColors.primaryGreen),
-                        const SizedBox(width: AppDimensions.space8),
-                        Expanded(
-                          child: Text(
-                            'Verified from ${opp.sourceUrl} on ${DateFormatter.formatDate(opp.lastVerifiedAt)}',
-                            style: AppTypography.caption.copyWith(color: AppColors.textMuted, fontSize: 11),
-                          ),
-                        ),
-                      ],
-                    ),
+          body: SingleChildScrollView(
+            padding: const EdgeInsets.all(AppDimensions.space16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Header Container
+                Container(
+                  padding: const EdgeInsets.all(AppDimensions.space16),
+                  decoration: BoxDecoration(
+                    color: theme.cardColor,
+                    borderRadius: AppDimensions.roundedDefault,
+                    border: Border.all(color: theme.colorScheme.outline),
                   ),
-                  const SizedBox(height: AppDimensions.space16),
-
-                  // Category & Vacancies Tag
-                  Row(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: AppDimensions.space8, vertical: AppDimensions.space4),
-                        decoration: BoxDecoration(
-                          color: AppColors.secondaryBackground,
-                          borderRadius: AppDimensions.roundedSmall,
-                          border: Border.all(color: AppColors.border),
-                        ),
-                        child: Text(opp.category.label, style: AppTypography.caption.copyWith(color: AppColors.primaryGreen)),
-                      ),
-                      if (opp.vacancies != null) ...[
-                        const SizedBox(width: AppDimensions.space8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: AppDimensions.space8, vertical: AppDimensions.space4),
-                          decoration: BoxDecoration(
-                            color: AppColors.surface,
-                            borderRadius: AppDimensions.roundedSmall,
-                            border: Border.all(color: AppColors.border),
-                          ),
-                          child: Text('${opp.vacancies} Vacancies', style: AppTypography.caption.copyWith(color: AppColors.textMain)),
-                        ),
-                      ],
-                    ],
-                  ),
-                  const SizedBox(height: AppDimensions.space12),
-
-                  // 1. Opportunity Title
-                  Text(opp.title, style: AppTypography.screenTitle.copyWith(fontSize: 22, height: 1.25)),
-                  const SizedBox(height: AppDimensions.space8),
-
-                  // 2. Issuing Authority
-                  Text('${opp.organisation} • ${opp.issuingAuthority}', style: AppTypography.cardSubtitle),
-                  const SizedBox(height: AppDimensions.space16),
-
-                  // Eligibility Quick Card & Action
-                  Container(
-                    padding: const EdgeInsets.all(AppDimensions.space16),
-                    decoration: BoxDecoration(
-                      color: AppColors.surface,
-                      borderRadius: AppDimensions.roundedDefault,
-                      border: Border.all(color: AppColors.primaryGreen.withOpacity(0.3)),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text('ELIGIBILITY STATUS', style: AppTypography.label.copyWith(color: AppColors.primaryGreen)),
-                            const StatusBadge(status: EligibilityStatus.eligible, isCompact: true),
-                          ],
-                        ),
-                        const SizedBox(height: AppDimensions.space8),
-                        Text(
-                          'Based on your profile, you meet age, degree, and reservation eligibility conditions.',
-                          style: AppTypography.body,
-                        ),
-                        const SizedBox(height: AppDimensions.space12),
-                        OutlinedButton.icon(
-                          icon: const Icon(Icons.analytics_outlined, size: 16, color: AppColors.primaryGreen),
-                          label: const Text('View Detailed Criterion Breakdown'),
-                          onPressed: () => context.go('/eligibility/${opp.id}'),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: AppDimensions.space20),
-
-                  // 4. Overview
-                  _buildSectionHeader('4. Overview & Purpose'),
-                  Text(opp.overview, style: AppTypography.body),
-                  const SizedBox(height: AppDimensions.space20),
-
-                  // 6. Eligibility Criteria Summary
-                  _buildSectionHeader('6. Eligibility Criteria Summary'),
-                  Text(opp.eligibilityCriteriaSummary, style: AppTypography.body),
-                  const SizedBox(height: AppDimensions.space20),
-
-                  // 7 & 8. Age Limits & Relaxations
-                  _buildSectionHeader('7 & 8. Age Limits & Statutory Relaxation'),
-                  Container(
-                    padding: const EdgeInsets.all(AppDimensions.space12),
-                    decoration: BoxDecoration(
-                      color: AppColors.secondaryBackground,
-                      borderRadius: AppDimensions.roundedDefault,
-                      border: Border.all(color: AppColors.border),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('Standard Age Band: ${opp.minAge} to ${opp.maxAge} years', style: AppTypography.cardTitle),
-                        const SizedBox(height: AppDimensions.space8),
-                        const Divider(color: AppColors.border),
-                        const SizedBox(height: AppDimensions.space8),
-                        ...opp.categoryAgeRelaxation.entries.map((entry) {
-                          return Padding(
-                            padding: const EdgeInsets.only(bottom: AppDimensions.space6),
-                            child: Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                SizedBox(
-                                  width: 120,
-                                  child: Text(entry.key, style: AppTypography.caption.copyWith(color: AppColors.textMuted)),
+                      // Badge Row
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: isDark ? AppColors.darkSecondaryBackground : AppColors.lightSecondaryBackground,
+                                  borderRadius: AppDimensions.roundedSmall,
+                                  border: Border.all(color: theme.colorScheme.outline),
                                 ),
-                                Expanded(
-                                  child: Text(entry.value, style: AppTypography.body.copyWith(fontSize: 13)),
+                                child: Text(
+                                  opportunity.category.label,
+                                  style: AppTypography.caption.copyWith(color: AppColors.primaryBlue, fontWeight: FontWeight.bold),
+                                ),
+                              ),
+                              if (opportunity.vacancies != null) ...[
+                                const SizedBox(width: 8),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.successLight,
+                                    borderRadius: AppDimensions.roundedSmall,
+                                  ),
+                                  child: Text(
+                                    '${opportunity.vacancies} Vacancies',
+                                    style: const TextStyle(color: AppColors.success, fontWeight: FontWeight.bold, fontSize: 11),
+                                  ),
                                 ),
                               ],
-                            ),
-                          );
-                        }),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: AppDimensions.space20),
-
-                  // 9. Educational Qualifications
-                  _buildSectionHeader('9. Prescribed Educational Qualifications'),
-                  ...opp.educationalQualifications.map((qual) => _buildCheckItem(qual)),
-                  const SizedBox(height: AppDimensions.space20),
-
-                  // 10 & 11. Nationality & Gender
-                  _buildSectionHeader('10 & 11. Nationality & Gender Requirements'),
-                  _buildKeyValueRow('Nationality', opp.nationality),
-                  _buildKeyValueRow('Gender Eligibility', opp.genderRequirements),
-                  const SizedBox(height: AppDimensions.space20),
-
-                  // 12. Work Experience
-                  _buildSectionHeader('12. Work Experience Requirements'),
-                  Text(opp.workExperience, style: AppTypography.body),
-                  const SizedBox(height: AppDimensions.space20),
-
-                  // 13. Application Fee & Exemptions
-                  _buildSectionHeader('13. Application Fee & Fee Exemptions'),
-                  _buildKeyValueRow('General Fee', CurrencyFormatter.formatInr(opp.applicationFee)),
-                  _buildKeyValueRow('Exemptions / Concessions', opp.feeExemptions),
-                  const SizedBox(height: AppDimensions.space20),
-
-                  // 14. Required Documents Checklist
-                  _buildSectionHeader('14. Mandatory Documents Checklist'),
-                  ...opp.requiredDocuments.map((doc) => _buildCheckItem(doc)),
-                  const SizedBox(height: AppDimensions.space20),
-
-                  // 15. Important Dates
-                  _buildSectionHeader('15. Important Official Dates'),
-                  Container(
-                    padding: const EdgeInsets.all(AppDimensions.space12),
-                    decoration: BoxDecoration(
-                      color: AppColors.secondaryBackground,
-                      borderRadius: AppDimensions.roundedDefault,
-                      border: Border.all(color: AppColors.border),
-                    ),
-                    child: Column(
-                      children: opp.importantDates.entries.map((e) {
-                        return Padding(
-                          padding: const EdgeInsets.only(bottom: AppDimensions.space8),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(e.key, style: AppTypography.caption.copyWith(color: AppColors.textMuted)),
-                              Text(DateFormatter.formatDate(e.value), style: AppTypography.caption.copyWith(color: AppColors.textMain, fontWeight: FontWeight.w600)),
                             ],
                           ),
-                        );
-                      }).toList(),
-                    ),
-                  ),
-                  const SizedBox(height: AppDimensions.space20),
-
-                  // 16 & 17. Selection & Exam Pattern
-                  _buildSectionHeader('16 & 17. Selection Procedure & Pattern'),
-                  Text(opp.selectionProcedure, style: AppTypography.body),
-                  if (opp.examPattern != null) ...[
-                    const SizedBox(height: AppDimensions.space8),
-                    Container(
-                      padding: const EdgeInsets.all(AppDimensions.space12),
-                      decoration: BoxDecoration(
-                        color: AppColors.surface,
-                        borderRadius: AppDimensions.roundedSmall,
-                        border: Border.all(color: AppColors.border),
+                          const StatusBadge(status: EligibilityStatus.eligible),
+                        ],
                       ),
-                      child: Text(opp.examPattern!, style: AppTypography.bodyMuted.copyWith(fontSize: 13)),
-                    ),
-                  ],
-                  const SizedBox(height: AppDimensions.space20),
+                      const SizedBox(height: AppDimensions.space12),
 
-                  // 18 & 19. Pay Scale & Location
-                  _buildSectionHeader('18 & 19. Remuneration & Posting Location'),
-                  if (opp.salaryOrPayScale != null) _buildKeyValueRow('Pay Scale / Stipend', opp.salaryOrPayScale!),
-                  _buildKeyValueRow('Location', opp.location),
-                  const SizedBox(height: AppDimensions.space20),
-
-                  // 20. Application Instructions
-                  _buildSectionHeader('20. Official Application Instructions'),
-                  Text(opp.applicationInstructions, style: AppTypography.body),
-                  const SizedBox(height: AppDimensions.space24),
-
-                  // Official Verification Links (21, 22, 23)
-                  _buildSectionHeader('21–23. Official Documents & Portal Links'),
-                  if (opp.officialNotificationPdfUrl != null) ...[
-                    OutlinedButton.icon(
-                      icon: const Icon(Icons.picture_as_pdf_outlined, size: 18, color: AppColors.error),
-                      label: const Text('Open Official Notification PDF'),
-                      onPressed: () => _launchUrl(context, opp.officialNotificationPdfUrl!),
-                    ),
-                    const SizedBox(height: AppDimensions.space8),
-                  ],
-                  ElevatedButton.icon(
-                    icon: const Icon(Icons.launch, size: 18),
-                    label: const Text('Open Official Application Portal'),
-                    onPressed: () => _launchUrl(context, opp.officialApplicationUrl),
-                  ),
-                  const SizedBox(height: AppDimensions.space8),
-                  Center(
-                    child: TextButton(
-                      onPressed: () => _launchUrl(context, opp.sourceUrl),
-                      child: Text(
-                        'Issuing Authority Website (${opp.sourceUrl})',
-                        style: AppTypography.caption.copyWith(color: AppColors.textMuted, decoration: TextDecoration.underline),
+                      // Title
+                      Text(
+                        opportunity.title,
+                        style: AppTypography.screenTitle.copyWith(
+                          fontSize: 19,
+                          fontWeight: FontWeight.w700,
+                          height: 1.3,
+                        ),
                       ),
-                    ),
+                      const SizedBox(height: AppDimensions.space6),
+
+                      // Organisation and Ministry
+                      Text(
+                        '${opportunity.organisation} • ${opportunity.issuingAuthority}',
+                        style: AppTypography.caption.copyWith(
+                          color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
+                        ),
+                      ),
+                      const SizedBox(height: AppDimensions.space12),
+
+                      // Location and Salary Chip
+                      Row(
+                        children: [
+                          const Icon(Icons.location_on_outlined, size: 14, color: AppColors.primaryBlue),
+                          const SizedBox(width: 4),
+                          Text(opportunity.location, style: AppTypography.caption),
+                          if (opportunity.salaryOrPayScale != null) ...[
+                            const SizedBox(width: 12),
+                            const Icon(Icons.account_balance_wallet_outlined, size: 14, color: AppColors.success),
+                            const SizedBox(width: 4),
+                            Expanded(
+                              child: Text(
+                                opportunity.salaryOrPayScale!,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: AppTypography.caption.copyWith(color: AppColors.success),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: AppDimensions.space24),
+                ),
+                const SizedBox(height: AppDimensions.space16),
+
+                // Eligibility Banner (Deterministic)
+                Container(
+                  padding: const EdgeInsets.all(AppDimensions.space16),
+                  decoration: BoxDecoration(
+                    color: AppColors.successLight,
+                    borderRadius: AppDimensions.roundedDefault,
+                    border: Border.all(color: AppColors.success.withValues(alpha: 0.3)),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.verified_user_rounded, color: AppColors.success, size: 28),
+                      const SizedBox(width: AppDimensions.space12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Profile Matched & Eligible',
+                              style: TextStyle(color: AppColors.success, fontWeight: FontWeight.bold, fontSize: 14),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              'Your degree, age cutoff, and reservation category satisfy all mandatory rules.',
+                              style: TextStyle(color: Colors.black.withValues(alpha: 0.7), fontSize: 12),
+                            ),
+                          ],
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: () => context.go('/eligibility/${opportunity.id}'),
+                        child: const Text('View Report', style: TextStyle(color: AppColors.success, fontWeight: FontWeight.bold, fontSize: 12)),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: AppDimensions.space20),
+
+                // Overview Section
+                _buildSectionHeader('Overview & Description'),
+                const SizedBox(height: AppDimensions.space8),
+                Text(
+                  opportunity.overview.isNotEmpty ? opportunity.overview : 'No description provided.',
+                  style: AppTypography.body.copyWith(height: 1.5),
+                ),
+                const SizedBox(height: AppDimensions.space20),
+
+                // Important Verified Dates Section
+                _buildSectionHeader('Important Dates (Official Schedule)'),
+                const SizedBox(height: AppDimensions.space8),
+                Container(
+                  decoration: BoxDecoration(
+                    color: theme.cardColor,
+                    borderRadius: AppDimensions.roundedDefault,
+                    border: Border.all(color: theme.colorScheme.outline),
+                  ),
+                  child: Column(
+                    children: [
+                      _buildDateTile(
+                        'Application Deadline',
+                        deadline != null ? DateFormat('d MMMM yyyy, HH:mm').format(deadline) : 'To be announced',
+                        isUrgent: DateFormatter.isClosingSoon(deadline),
+                      ),
+                      if (opportunity.importantDates['Notification Date'] != null)
+                        _buildDateTile(
+                          'Notification Released',
+                          DateFormat('d MMMM yyyy').format(opportunity.importantDates['Notification Date']!),
+                        ),
+                      if (opportunity.importantDates['Examination Date'] != null)
+                        _buildDateTile(
+                          'Scheduled Examination Date',
+                          DateFormat('d MMMM yyyy').format(opportunity.importantDates['Examination Date']!),
+                        ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: AppDimensions.space20),
+
+                // Statutory Eligibility Requirements
+                _buildSectionHeader('Statutory Eligibility Criteria'),
+                const SizedBox(height: AppDimensions.space8),
+                Container(
+                  padding: const EdgeInsets.all(AppDimensions.space16),
+                  decoration: BoxDecoration(
+                    color: theme.cardColor,
+                    borderRadius: AppDimensions.roundedDefault,
+                    border: Border.all(color: theme.colorScheme.outline),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildCriterionRow('Age Limit', '${opportunity.minAge ?? 18} to ${opportunity.maxAge ?? 35} years (Cutoff: Aug 2026)'),
+                      _buildCriterionRow('Educational Qualifications', opportunity.educationalQualifications.join('\n')),
+                      _buildCriterionRow('Eligible Streams / Branches', opportunity.eligibleStreams.join(', ')),
+                      _buildCriterionRow('Minimum Percentage', opportunity.minPercentage != null ? '${opportunity.minPercentage}% marks' : 'Passing marks required'),
+                      _buildCriterionRow('Nationality Requirement', opportunity.nationality),
+                      _buildCriterionRow('Prior Work Experience', opportunity.workExperience),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: AppDimensions.space20),
+
+                // Application Fee Details
+                _buildSectionHeader('Application Fee & Concessions'),
+                const SizedBox(height: AppDimensions.space8),
+                Container(
+                  padding: const EdgeInsets.all(AppDimensions.space16),
+                  decoration: BoxDecoration(
+                    color: theme.cardColor,
+                    borderRadius: AppDimensions.roundedDefault,
+                    border: Border.all(color: theme.colorScheme.outline),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text('General / OBC / EWS Fee:'),
+                          Text(
+                            CurrencyFormatter.format(opportunity.applicationFee),
+                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                          ),
+                        ],
+                      ),
+                      const Divider(height: 20),
+                      Text(
+                        'Fee Exemptions: ${opportunity.feeExemptions.isNotEmpty ? opportunity.feeExemptions : "SC/ST/PwBD and Female candidates exempted."}',
+                        style: AppTypography.caption.copyWith(color: AppColors.success),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: AppDimensions.space20),
+
+                // Official Documents & Links
+                _buildSectionHeader('Official Sources & Documents'),
+                const SizedBox(height: AppDimensions.space8),
+                if (opportunity.officialNotificationPdfUrl != null) ...[
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(Icons.picture_as_pdf_outlined, color: AppColors.error),
+                    title: const Text('Official Notification Gazette PDF', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+                    subtitle: const Text('Download original gazette from conducting authority'),
+                    trailing: const Icon(Icons.open_in_new, size: 16),
+                    onTap: () => _launchUrl(context, opportunity.officialNotificationPdfUrl!),
+                  ),
+                  const Divider(),
                 ],
-              ),
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Icon(Icons.public, color: AppColors.primaryBlue),
+                  title: const Text('Official Application Portal', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+                  subtitle: Text(opportunity.officialApplicationUrl, maxLines: 1, overflow: TextOverflow.ellipsis),
+                  trailing: const Icon(Icons.open_in_new, size: 16),
+                  onTap: () => _launchUrl(context, opportunity.officialApplicationUrl),
+                ),
+                const SizedBox(height: AppDimensions.space32),
+              ],
             ),
           ),
           bottomNavigationBar: Container(
             padding: const EdgeInsets.all(AppDimensions.space16),
-            decoration: const BoxDecoration(
-              color: AppColors.surface,
-              border: Border(top: BorderSide(color: AppColors.border)),
+            decoration: BoxDecoration(
+              color: isDark ? AppColors.darkSecondaryBackground : Colors.white,
+              border: Border(top: BorderSide(color: theme.colorScheme.outline)),
             ),
             child: Row(
               children: [
-                Expanded(
-                  child: OutlinedButton.icon(
-                    icon: Icon(
-                      tracker != null ? Icons.check_circle_outline : Icons.flag_outlined,
-                      size: 16,
-                      color: tracker != null ? AppColors.primaryGreen : AppColors.textMain,
-                    ),
-                    label: Text(tracker != null ? tracker.status.label : 'Track Status'),
-                    onPressed: () => _showTrackApplicationDialog(context, ref, opp),
+                OutlinedButton.icon(
+                  onPressed: () => _showTrackApplicationDialog(context, ref, opportunity),
+                  icon: const Icon(Icons.add_task_rounded, size: 18),
+                  label: const Text('Track Application'),
+                  style: OutlinedButton.styleFrom(
+                    minimumSize: const Size(160, AppDimensions.buttonHeight),
                   ),
                 ),
                 const SizedBox(width: AppDimensions.space12),
                 Expanded(
-                  child: ElevatedButton(
-                    onPressed: () => _launchUrl(context, opp.officialApplicationUrl),
-                    child: const Text('Apply on Portal'),
+                  child: ElevatedButton.icon(
+                    onPressed: () => _launchUrl(context, opportunity.officialApplicationUrl),
+                    icon: const Icon(Icons.open_in_new_rounded, size: 18),
+                    label: const Text('Apply on Portal'),
                   ),
                 ),
               ],
@@ -451,53 +455,54 @@ class OpportunityDetailsScreen extends ConsumerWidget {
         );
       },
       loading: () => const Scaffold(
-        backgroundColor: AppColors.background,
-        body: Center(child: CircularProgressIndicator(color: AppColors.primaryGreen)),
+        body: Center(child: CircularProgressIndicator(color: AppColors.primaryBlue)),
       ),
-      error: (err, _) => Scaffold(
-        backgroundColor: AppColors.background,
-        body: Center(child: Text('Error: $err')),
+      error: (err, stack) => Scaffold(
+        appBar: AppBar(),
+        body: Center(child: Text('Error loading examination details: $err')),
       ),
     );
   }
 
   Widget _buildSectionHeader(String title) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: AppDimensions.space8),
-      child: Text(
-        title,
-        style: AppTypography.sectionHeader.copyWith(color: AppColors.primaryGreen),
-      ),
+    return Row(
+      children: [
+        Container(width: 3, height: 16, color: AppColors.primaryBlue),
+        const SizedBox(width: AppDimensions.space8),
+        Text(title, style: AppTypography.sectionHeader),
+      ],
     );
   }
 
-  Widget _buildCheckItem(String text) {
+  Widget _buildDateTile(String label, String value, {bool isUrgent = false}) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: AppDimensions.space6),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          const Icon(Icons.check, size: 16, color: AppColors.primaryGreen),
-          const SizedBox(width: AppDimensions.space8),
-          Expanded(child: Text(text, style: AppTypography.body.copyWith(fontSize: 13))),
+          Text(label, style: const TextStyle(fontSize: 13)),
+          Text(
+            value,
+            style: TextStyle(
+              fontWeight: FontWeight.w600,
+              fontSize: 13,
+              color: isUrgent ? AppColors.warning : null,
+            ),
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildKeyValueRow(String key, String value) {
+  Widget _buildCriterionRow(String label, String value) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: AppDimensions.space8),
-      child: Row(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(
-            width: 140,
-            child: Text(key, style: AppTypography.caption.copyWith(color: AppColors.textMuted)),
-          ),
-          Expanded(
-            child: Text(value, style: AppTypography.body.copyWith(fontSize: 13, fontWeight: FontWeight.w500)),
-          ),
+          Text(label, style: AppTypography.caption.copyWith(color: AppColors.primaryBlue, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 2),
+          Text(value, style: const TextStyle(fontSize: 13, height: 1.4)),
         ],
       ),
     );

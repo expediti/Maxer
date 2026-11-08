@@ -1,10 +1,12 @@
 import 'opportunity.dart';
 
 enum OpportunitySortOption {
-  relevance('Relevance'),
-  latest('Recently Announced'),
+  latest('Latest Published'),
   deadline('Closing Soonest'),
-  feeLowToHigh('Application Fee: Low to High');
+  recentlyUpdated('Recently Updated'),
+  alphabetical('Alphabetical (A-Z)'),
+  relevance('Relevance'),
+  feeLowToHigh('Fee: Low to High');
 
   final String label;
   const OpportunitySortOption(this.label);
@@ -34,7 +36,7 @@ class OpportunityFilter {
     this.maxFee,
     this.closingSoonOnly = false,
     this.eligibleOnly = false,
-    this.sortOption = OpportunitySortOption.relevance,
+    this.sortOption = OpportunitySortOption.latest,
   });
 
   OpportunityFilter copyWith({
@@ -81,4 +83,3 @@ class OpportunityFilter {
       closingSoonOnly ||
       eligibleOnly;
 }
-

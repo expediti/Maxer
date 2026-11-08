@@ -1,68 +1,68 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../domain/alert_item.dart';
+import 'package:rexam/core/providers/repository_providers.dart';
+import 'package:rexam/repositories/notification_repository.dart';
+import 'package:rexam/features/auth/presentation/providers/auth_provider.dart';
 
 class AlertsNotifier extends StateNotifier<List<AlertItem>> {
-  AlertsNotifier()
-      : super([
-          AlertItem(
-            id: 'alert-1',
-            title: 'Deadline Approaching: UPSC CSE 2026',
-            message:
-                'Online registration for Civil Services Examination (Preliminary) 2026 closes on 6th March 2026 at 18:00 IST. Ensure application fee is settled.',
-            type: AlertType.upcomingDeadline,
-            opportunityId: 'opp-upsc-cse-2026',
-            timestamp: DateTime(2026, 3, 4, 9, 30),
-            isRead: false,
-            officialSourceUrl: 'https://upsc.gov.in',
-          ),
-          AlertItem(
-            id: 'alert-2',
-            title: 'New Official Notification: DRDO Scientist "B"',
-            message:
-                'DRDO RAC has officially released Advt 148 for 204 Scientist "B" posts through valid GATE score. Online portal active.',
-            type: AlertType.officialNotification,
-            opportunityId: 'opp-drdo-scientist-b-2026',
-            timestamp: DateTime(2026, 3, 2, 14, 15),
-            isRead: false,
-            officialSourceUrl: 'https://rac.gov.in',
-          ),
-          AlertItem(
-            id: 'alert-3',
-            title: 'Corrigendum: ISRO ICRB 01/2026',
-            message:
-                'VSSC has issued an addendum clarifying the CGPA-to-percentage conversion norm for autonomous engineering institutions.',
-            type: AlertType.corrigendum,
-            opportunityId: 'opp-isro-scientist-2026',
-            timestamp: DateTime(2026, 3, 1, 11, 0),
-            isRead: true,
-            officialSourceUrl: 'https://isro.gov.in',
-          ),
-          AlertItem(
-            id: 'alert-4',
-            title: 'Admit Card Expected: SBI PO Prelims',
-            message:
-                'Preliminary online examination call letters for SBI PO are scheduled for release in the 2nd week of April 2026.',
-            type: AlertType.admitCard,
-            opportunityId: 'opp-sbi-po-2026',
-            timestamp: DateTime(2026, 2, 28, 16, 45),
-            isRead: true,
-            officialSourceUrl: 'https://sbi.co.in/careers',
-          ),
-        ]);
+  final NotificationRepository notifRepo;
+  final String candidateId;
+
+  AlertsNotifier({
+    required this.notifRepo,
+    required this.candidateId,
+  }) : super([]) {
+    loadAlerts();
+  }
+
+  Future<void> loadAlerts() async {
+    try {
+      final items = await notifRepo.getNotifications(candidateId);
+      final mapped = items.map((n) {
+        AlertType mappedType = AlertType.officialNotification;
+        final typeName = n.type.name.toLowerCase();
+        if (typeName.contains('deadline')) {
+          mappedType = AlertType.upcomingDeadline;
+        } else if (typeName.contains('corrigendum')) {
+          mappedType = AlertType.corrigendum;
+        } else if (typeName.contains('admit')) {
+          mappedType = AlertType.admitCard;
+        } else if (typeName.contains('result')) {
+          mappedType = AlertType.result;
+        }
+
+        return AlertItem(
+          id: n.id,
+          title: n.title,
+          message: n.message,
+          type: mappedType,
+          opportunityId: n.examinationId,
+          timestamp: n.timestamp,
+          isRead: n.isRead,
+          officialSourceUrl: n.officialSourceUrl,
+        );
+      }).toList();
+
+      state = mapped;
+    } catch (_) {}
+  }
 
   int get unreadCount => state.where((item) => !item.isRead).length;
 
-  void markAsRead(String alertId) {
+  Future<void> markAsRead(String alertId) async {
     state = state.map((item) {
       if (item.id == alertId) {
         return item.copyWith(isRead: true);
       }
       return item;
     }).toList();
+
+    await notifRepo.markAsRead(alertId);
   }
 
-  void markAllAsRead() {
+  Future<void> markAllAsRead() async {
     state = state.map((item) => item.copyWith(isRead: true)).toList();
+    await notifRepo.markAllAsRead(candidateId);
   }
 
   void removeAlert(String alertId) {
@@ -71,7 +71,14 @@ class AlertsNotifier extends StateNotifier<List<AlertItem>> {
 }
 
 final alertsProvider = StateNotifierProvider<AlertsNotifier, List<AlertItem>>((ref) {
-  return AlertsNotifier();
+  final notifRepo = ref.watch(notificationRepositoryProvider);
+  final authState = ref.watch(authProvider);
+  final candidateId = authState.user?.id ?? 'candidate-rexam-001';
+
+  return AlertsNotifier(
+    notifRepo: notifRepo,
+    candidateId: candidateId,
+  );
 });
 
 final unreadAlertsCountProvider = Provider<int>((ref) {

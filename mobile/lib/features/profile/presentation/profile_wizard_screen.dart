@@ -5,8 +5,8 @@ import 'package:intl/intl.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_dimensions.dart';
 import '../../../core/theme/app_typography.dart';
-import '../../opportunities/domain/opportunity.dart';
-import '../domain/candidate_profile.dart';
+import '../../../models/candidate_profile.dart';
+import '../../../models/examination.dart';
 import 'providers/profile_provider.dart';
 
 class ProfileWizardScreen extends ConsumerStatefulWidget {
@@ -19,17 +19,18 @@ class ProfileWizardScreen extends ConsumerStatefulWidget {
 class _ProfileWizardScreenState extends ConsumerState<ProfileWizardScreen> {
   int _currentStep = 0;
   final int _totalSteps = 5;
+  bool _isSaving = false;
 
   // Controllers & Form State
-  // Step 1: Personal
+  // Step 1: Personal Information
   late TextEditingController _nameController;
   DateTime? _selectedDob;
   String _selectedGender = 'Male';
-  String _nationality = 'Indian';
+  final String _nationality = 'Indian';
   String _selectedState = 'Delhi';
-  String _district = 'New Delhi';
+  late TextEditingController _districtController;
 
-  // Step 2: Category
+  // Step 2: Reservation and Special Categories
   String _socialCategory = 'General';
   bool _isPwBD = false;
   String? _pwbdType;
@@ -39,34 +40,41 @@ class _ProfileWizardScreenState extends ConsumerState<ProfileWizardScreen> {
   String _highestQualification = 'B.Tech / B.E.';
   late TextEditingController _degreeController;
   late TextEditingController _streamController;
-  late TextEditingController _universityController;
+  late TextEditingController _institutionController;
   int _graduationYear = 2024;
   late TextEditingController _cgpaController;
   bool _hasActiveBacklogs = false;
-
-  // Step 4: Additional Qualifications
   late TextEditingController _gateScoreController;
   bool _hasNetJrf = false;
-  late TextEditingController _workExpController;
 
-  // Step 5: Preferences
-  List<OpportunityCategory> _selectedCategories = [
-    OpportunityCategory.govtRecruitment,
-    OpportunityCategory.psu,
+  // Step 4: Career Preferences
+  final List<ExaminationCategory> _selectedCategories = [
+    ExaminationCategory.govtRecruitment,
+    ExaminationCategory.psu,
   ];
-  late TextEditingController _maxFeeBudgetController;
+  final List<String> _careerInterests = ['Engineering', 'Computer Science', 'Administration'];
   bool _willingToRelocate = true;
-  List<String> _careerInterests = ['Engineering', 'Computer Science', 'Administration'];
+  late TextEditingController _maxFeeController;
 
-  final List<String> _availableStates = [
-    'Andhra Pradesh', 'Assam', 'Bihar', 'Delhi', 'Gujarat', 'Haryana',
-    'Karnataka', 'Kerala', 'Madhya Pradesh', 'Maharashtra', 'Odisha',
-    'Punjab', 'Rajasthan', 'Tamil Nadu', 'Telangana', 'Uttar Pradesh', 'West Bengal'
+  final List<String> _states = [
+    'All India', 'Andhra Pradesh', 'Assam', 'Bihar', 'Delhi', 'Gujarat', 'Haryana',
+    'Himachal Pradesh', 'Karnataka', 'Kerala', 'Madhya Pradesh', 'Maharashtra',
+    'Odisha', 'Punjab', 'Rajasthan', 'Tamil Nadu', 'Telangana', 'Uttar Pradesh', 'West Bengal'
+  ];
+
+  final List<String> _qualifications = [
+    '10th Standard',
+    '12th Standard',
+    'Diploma',
+    'B.Tech / B.E.',
+    'Bachelor\'s Degree (Non-Engg)',
+    'Master\'s Degree',
+    'Ph.D'
   ];
 
   final List<String> _availableInterests = [
     'Engineering', 'Computer Science', 'Administration', 'Banking',
-    'Defence', 'Research', 'Science', 'Management', 'Teaching'
+    'Defence', 'Research', 'Science', 'Railways', 'Teaching', 'Civil Services'
   ];
 
   @override
@@ -79,124 +87,139 @@ class _ProfileWizardScreenState extends ConsumerState<ProfileWizardScreen> {
     _selectedDob = profile.dateOfBirth ?? DateTime(2001, 5, 20);
     _selectedGender = profile.gender ?? 'Male';
     _selectedState = profile.state ?? 'Delhi';
-    _district = profile.district ?? 'New Delhi';
+    _districtController = TextEditingController(text: profile.district ?? 'New Delhi');
+
     _socialCategory = profile.socialCategory;
     _isPwBD = profile.isPwBD;
+    _pwbdType = profile.pwbdDisabilityType;
     _isExServiceman = profile.isExServiceman;
 
     _highestQualification = profile.highestQualification ?? 'B.Tech / B.E.';
     _degreeController = TextEditingController(text: profile.degreeName ?? 'Bachelor of Technology');
     _streamController = TextEditingController(text: profile.stream ?? 'Computer Science & Engineering');
-    _universityController = TextEditingController(text: profile.universityOrCollege ?? 'Delhi Technological University');
+    _institutionController = TextEditingController(text: profile.institution ?? 'Delhi Technological University (DTU)');
+    _graduationYear = profile.graduationYear ?? 2024;
     _cgpaController = TextEditingController(text: profile.cgpaOrPercentage?.toString() ?? '78.5');
-
+    _hasActiveBacklogs = profile.hasActiveBacklogs;
     _gateScoreController = TextEditingController(text: profile.gateScore?.toString() ?? '680');
     _hasNetJrf = profile.hasNetJrf;
-    _workExpController = TextEditingController(text: profile.workExperienceYears.toString());
 
-    _maxFeeBudgetController = TextEditingController(text: profile.maxApplicationFeeBudget?.toString() ?? '1000');
+    _willingToRelocate = profile.willingToRelocate;
+    _maxFeeController = TextEditingController(text: profile.maxApplicationFeeBudget?.toString() ?? '1000');
   }
 
   @override
   void dispose() {
     _nameController.dispose();
+    _districtController.dispose();
     _degreeController.dispose();
     _streamController.dispose();
-    _universityController.dispose();
+    _institutionController.dispose();
     _cgpaController.dispose();
     _gateScoreController.dispose();
-    _workExpController.dispose();
-    _maxFeeBudgetController.dispose();
+    _maxFeeController.dispose();
     super.dispose();
   }
 
-  void _saveAndNext() {
-    if (_currentStep < _totalSteps - 1) {
-      setState(() => _currentStep++);
-    } else {
-      _finishWizard();
+  int? get _calculatedAge {
+    if (_selectedDob == null) return null;
+    final now = DateTime.now();
+    int age = now.year - _selectedDob!.year;
+    if (now.month < _selectedDob!.month ||
+        (now.month == _selectedDob!.month && now.day < _selectedDob!.day)) {
+      age--;
+    }
+    return age;
+  }
+
+  Future<void> _selectDateOfBirth() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _selectedDob ?? DateTime(2002, 1, 1),
+      firstDate: DateTime(1970, 1, 1),
+      lastDate: DateTime.now(),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context),
+          child: child!,
+        );
+      },
+    );
+
+    if (picked != null) {
+      setState(() => _selectedDob = picked);
     }
   }
 
-  void _finishWizard() {
-    final currentProfile = ref.read(profileProvider).valueOrNull ??
+  Future<void> _saveAndComplete() async {
+    setState(() => _isSaving = true);
+
+    final current = ref.read(profileProvider).valueOrNull ??
         const CandidateProfile(id: 'temp', email: 'candidate@rexam.in');
 
-    final updated = currentProfile.copyWith(
+    final updated = current.copyWith(
       fullName: _nameController.text.trim(),
       dateOfBirth: _selectedDob,
       gender: _selectedGender,
       nationality: _nationality,
       state: _selectedState,
-      district: _district,
+      district: _districtController.text.trim(),
       socialCategory: _socialCategory,
       isPwBD: _isPwBD,
-      pwbdDisabilityType: _pwbdType,
+      pwbdDisabilityType: _isPwBD ? _pwbdType : null,
       isExServiceman: _isExServiceman,
       highestQualification: _highestQualification,
       degreeName: _degreeController.text.trim(),
       stream: _streamController.text.trim(),
-      universityOrCollege: _universityController.text.trim(),
+      institution: _institutionController.text.trim(),
       graduationYear: _graduationYear,
       cgpaOrPercentage: double.tryParse(_cgpaController.text.trim()),
       hasActiveBacklogs: _hasActiveBacklogs,
       gateScore: int.tryParse(_gateScoreController.text.trim()),
       hasNetJrf: _hasNetJrf,
-      workExperienceYears: double.tryParse(_workExpController.text.trim()) ?? 0.0,
       preferredCategories: _selectedCategories,
-      maxApplicationFeeBudget: num.tryParse(_maxFeeBudgetController.text.trim()),
-      willingToRelocate: _willingToRelocate,
       careerInterests: _careerInterests,
+      willingToRelocate: _willingToRelocate,
+      maxApplicationFeeBudget: num.tryParse(_maxFeeController.text.trim()),
     );
 
-    ref.read(profileProvider.notifier).updateProfile(updated);
+    await ref.read(profileProvider.notifier).updateProfile(updated);
+
+    if (!mounted) return;
+    setState(() => _isSaving = false);
     context.go('/discover');
   }
 
   @override
   Widget build(BuildContext context) {
-    final progress = ((_currentStep + 1) / _totalSteps * 100).toInt();
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: isDark ? AppColors.darkBackground : AppColors.lightBackground,
       appBar: AppBar(
-        title: Text('Profile Setup (${_currentStep + 1}/$_totalSteps)'),
-        actions: [
-          TextButton(
-            onPressed: _finishWizard,
-            child: const Text('Skip for Now'),
-          ),
-        ],
+        title: Text('Profile Setup (${_currentStep + 1} of $_totalSteps)'),
+        leading: _currentStep > 0
+            ? IconButton(
+                icon: const Icon(Icons.arrow_back),
+                onPressed: () => setState(() => _currentStep--),
+              )
+            : IconButton(
+                icon: const Icon(Icons.close),
+                onPressed: () => context.go('/discover'),
+              ),
       ),
       body: SafeArea(
         child: Column(
           children: [
-            // Progress Bar
+            // Linear Progress Indicator
             LinearProgressIndicator(
               value: (_currentStep + 1) / _totalSteps,
-              backgroundColor: AppColors.surface,
-              valueColor: const AlwaysStoppedAnimation<Color>(AppColors.primaryGreen),
-              minHeight: 3,
+              backgroundColor: isDark ? AppColors.darkBorder : AppColors.lightBorder,
+              valueColor: const AlwaysStoppedAnimation<Color>(AppColors.primaryBlue),
+              minHeight: 4,
             ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: AppDimensions.space16, vertical: AppDimensions.space8),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    _getStepTitle(_currentStep),
-                    style: AppTypography.label.copyWith(color: AppColors.primaryGreen),
-                  ),
-                  Text(
-                    '$progress% Complete',
-                    style: AppTypography.caption.copyWith(color: AppColors.textMuted),
-                  ),
-                ],
-              ),
-            ),
-            const Divider(color: AppColors.border),
 
-            // Step Content
             Expanded(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.all(AppDimensions.space20),
@@ -204,30 +227,43 @@ class _ProfileWizardScreenState extends ConsumerState<ProfileWizardScreen> {
               ),
             ),
 
-            // Bottom Buttons
+            // Bottom Navigation Controls
             Container(
               padding: const EdgeInsets.all(AppDimensions.space16),
-              decoration: const BoxDecoration(
-                color: AppColors.surface,
-                border: Border(top: BorderSide(color: AppColors.border)),
+              decoration: BoxDecoration(
+                color: isDark ? AppColors.darkSecondaryBackground : AppColors.lightSurface,
+                border: Border(top: BorderSide(color: theme.colorScheme.outline)),
               ),
               child: Row(
                 children: [
-                  if (_currentStep > 0) ...[
-                    Expanded(
-                      flex: 1,
-                      child: OutlinedButton(
-                        onPressed: () => setState(() => _currentStep--),
-                        child: const Text('Back'),
+                  if (_currentStep > 0 && _currentStep < 4) ...[
+                    OutlinedButton(
+                      onPressed: () => setState(() => _currentStep--),
+                      style: OutlinedButton.styleFrom(
+                        minimumSize: const Size(100, AppDimensions.buttonHeight),
                       ),
+                      child: const Text('Back'),
                     ),
                     const SizedBox(width: AppDimensions.space12),
                   ],
                   Expanded(
-                    flex: 2,
                     child: ElevatedButton(
-                      onPressed: _saveAndNext,
-                      child: Text(_currentStep == _totalSteps - 1 ? 'Complete Setup' : 'Save & Continue'),
+                      onPressed: _isSaving
+                          ? null
+                          : () {
+                              if (_currentStep < _totalSteps - 1) {
+                                setState(() => _currentStep++);
+                              } else {
+                                _saveAndComplete();
+                              }
+                            },
+                      child: _isSaving
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation<Color>(Colors.white)),
+                            )
+                          : Text(_currentStep == _totalSteps - 1 ? 'Explore Opportunities' : 'Continue'),
                     ),
                   ),
                 ],
@@ -237,23 +273,6 @@ class _ProfileWizardScreenState extends ConsumerState<ProfileWizardScreen> {
         ),
       ),
     );
-  }
-
-  String _getStepTitle(int step) {
-    switch (step) {
-      case 0:
-        return 'Personal Information';
-      case 1:
-        return 'Category & Statutory Relaxation';
-      case 2:
-        return 'Educational Background';
-      case 3:
-        return 'Competitive Scores & Certifications';
-      case 4:
-        return 'Career & Location Preferences';
-      default:
-        return '';
-    }
   }
 
   Widget _buildCurrentStepContent() {
@@ -265,190 +284,220 @@ class _ProfileWizardScreenState extends ConsumerState<ProfileWizardScreen> {
       case 2:
         return _buildStep3Education();
       case 3:
-        return _buildStep4Qualifications();
+        return _buildStep4Preferences();
       case 4:
-        return _buildStep5Preferences();
+        return _buildStep5Completion();
       default:
         return const SizedBox.shrink();
     }
   }
 
+  // ---------------------------------------------------------------------------
+  // STEP 1: Personal Information
+  // ---------------------------------------------------------------------------
   Widget _buildStep1Personal() {
+    final age = _calculatedAge;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Candidate Identity', style: AppTypography.screenTitle),
+        Text('Step 1: Personal Information', style: AppTypography.screenTitle),
         const SizedBox(height: AppDimensions.space4),
-        Text('Used exclusively for accurate age cutoff and domicile verification.', style: AppTypography.bodyMuted),
-        const SizedBox(height: AppDimensions.space20),
+        Text('Accurate demographics ensure exact age cutoff & eligibility checks.', style: AppTypography.bodyMuted),
+        const SizedBox(height: AppDimensions.space24),
 
         TextField(
           controller: _nameController,
-          decoration: const InputDecoration(labelText: 'Full Name (as per 10th / Matriculation Certificate)'),
+          decoration: const InputDecoration(
+            labelText: 'Full Legal Name',
+            hintText: 'As on Matriculation Certificate',
+          ),
         ),
         const SizedBox(height: AppDimensions.space16),
 
-        // Date of Birth
+        // Date of Birth & Calculated Age
         InkWell(
-          onTap: () async {
-            final picked = await showDatePicker(
-              context: context,
-              initialDate: _selectedDob ?? DateTime(2000, 1, 1),
-              firstDate: DateTime(1975),
-              lastDate: DateTime.now(),
-              builder: (context, child) => Theme(
-                data: ThemeData.dark().copyWith(
-                  colorScheme: const ColorScheme.dark(
-                    primary: AppColors.primaryGreen,
-                    surface: AppColors.surface,
-                  ),
-                ),
-                child: child!,
-              ),
-            );
-            if (picked != null) setState(() => _selectedDob = picked);
-          },
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: AppDimensions.space16, vertical: AppDimensions.space12),
-            decoration: BoxDecoration(
-              color: AppColors.secondaryBackground,
-              borderRadius: AppDimensions.roundedDefault,
-              border: Border.all(color: AppColors.border),
+          onTap: _selectDateOfBirth,
+          borderRadius: AppDimensions.roundedDefault,
+          child: InputDecorator(
+            decoration: const InputDecoration(
+              labelText: 'Date of Birth (DOB)',
+              suffixIcon: Icon(Icons.calendar_today_outlined, size: 20),
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Date of Birth', style: AppTypography.caption.copyWith(color: AppColors.textSubtle)),
-                    const SizedBox(height: 2),
-                    Text(
-                      _selectedDob != null ? DateFormat('dd MMMM yyyy').format(_selectedDob!) : 'Select Date of Birth',
-                      style: AppTypography.body,
-                    ),
-                  ],
+                Text(
+                  _selectedDob != null ? DateFormat('dd MMMM yyyy').format(_selectedDob!) : 'Select Date of Birth',
+                  style: TextStyle(fontSize: 14, color: _selectedDob != null ? null : AppColors.lightTextSubtle),
                 ),
-                const Icon(Icons.calendar_today_outlined, size: 18, color: AppColors.textMuted),
+                if (age != null)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: AppColors.primaryBlueLight,
+                      borderRadius: AppDimensions.roundedSmall,
+                    ),
+                    child: Text(
+                      '$age Years Old',
+                      style: const TextStyle(color: AppColors.primaryBlueDark, fontWeight: FontWeight.bold, fontSize: 11),
+                    ),
+                  ),
               ],
             ),
           ),
         ),
         const SizedBox(height: AppDimensions.space16),
 
-        // Gender
+        // Gender (for exam fee exemptions and gender-specific reservations)
         DropdownButtonFormField<String>(
-          value: _selectedGender,
-          decoration: const InputDecoration(labelText: 'Gender'),
+          initialValue: _selectedGender,
+          decoration: const InputDecoration(labelText: 'Gender (For fee exemption & eligibility)'),
           items: const [
             DropdownMenuItem(value: 'Male', child: Text('Male')),
-            DropdownMenuItem(value: 'Female', child: Text('Female')),
+            DropdownMenuItem(value: 'Female', child: Text('Female (Eligible for statutory fee waivers)')),
             DropdownMenuItem(value: 'Transgender / Other', child: Text('Transgender / Other')),
           ],
-          onChanged: (val) => setState(() => _selectedGender = val!),
+          onChanged: (val) {
+            if (val != null) setState(() => _selectedGender = val);
+          },
         ),
         const SizedBox(height: AppDimensions.space16),
 
-        // State / Domicile
+        // State & District
         DropdownButtonFormField<String>(
-          value: _selectedState,
-          decoration: const InputDecoration(labelText: 'Home State / Domicile'),
-          items: _availableStates.map((st) => DropdownMenuItem(value: st, child: Text(st))).toList(),
-          onChanged: (val) => setState(() => _selectedState = val!),
+          initialValue: _selectedState,
+          decoration: const InputDecoration(labelText: 'State of Domicile'),
+          items: _states.map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
+          onChanged: (val) {
+            if (val != null) setState(() => _selectedState = val);
+          },
+        ),
+        const SizedBox(height: AppDimensions.space16),
+
+        TextField(
+          controller: _districtController,
+          decoration: const InputDecoration(labelText: 'District of Residence'),
         ),
       ],
     );
   }
 
+  // ---------------------------------------------------------------------------
+  // STEP 2: Reservation & Special Categories
+  // ---------------------------------------------------------------------------
   Widget _buildStep2Category() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Category & Reservation Conditions', style: AppTypography.screenTitle),
+        Text('Step 2: Reservation & Relaxations', style: AppTypography.screenTitle),
         const SizedBox(height: AppDimensions.space4),
-        Text('Statutory relaxations are verified against central or state notification norms.', style: AppTypography.bodyMuted),
-        const SizedBox(height: AppDimensions.space20),
+        Text('Statutory relaxations in upper age limits and application fee waivers are evaluated based on these.', style: AppTypography.bodyMuted),
+        const SizedBox(height: AppDimensions.space24),
 
-        // Category Selection
         DropdownButtonFormField<String>(
-          value: _socialCategory,
-          decoration: const InputDecoration(labelText: 'Reservation Category'),
+          initialValue: _socialCategory,
+          decoration: const InputDecoration(labelText: 'Social Category'),
           items: const [
-            DropdownMenuItem(value: 'General', child: Text('General (Unreserved)')),
-            DropdownMenuItem(value: 'OBC-NCL', child: Text('OBC-NCL (Other Backward Class Non-Creamy Layer)')),
-            DropdownMenuItem(value: 'SC', child: Text('SC (Scheduled Caste)')),
-            DropdownMenuItem(value: 'ST', child: Text('ST (Scheduled Tribe)')),
+            DropdownMenuItem(value: 'General', child: Text('General / Unreserved')),
+            DropdownMenuItem(value: 'OBC-NCL', child: Text('OBC-NCL (Other Backward Classes - Non-Creamy) (+3 yrs)')),
+            DropdownMenuItem(value: 'SC', child: Text('SC (Scheduled Caste) (+5 yrs, fee exempt)')),
+            DropdownMenuItem(value: 'ST', child: Text('ST (Scheduled Tribe) (+5 yrs, fee exempt)')),
             DropdownMenuItem(value: 'EWS', child: Text('EWS (Economically Weaker Section)')),
           ],
-          onChanged: (val) => setState(() => _socialCategory = val!),
+          onChanged: (val) {
+            if (val != null) setState(() => _socialCategory = val);
+          },
         ),
-        const SizedBox(height: AppDimensions.space16),
+        const SizedBox(height: AppDimensions.space20),
 
-        // PwBD
+        // PwBD Toggle
         SwitchListTile(
           contentPadding: EdgeInsets.zero,
-          title: Text('Person with Benchmark Disability (PwBD)', style: AppTypography.body),
-          subtitle: Text('Eligible for age relaxation (+10 yrs) and fee exemptions in public exams.', style: AppTypography.caption),
+          title: const Text('Person with Benchmark Disability (PwBD)', style: TextStyle(fontWeight: FontWeight.w600)),
+          subtitle: const Text('Eligible for up to 10 years upper age relaxation & scribe assistance.', style: TextStyle(fontSize: 12)),
           value: _isPwBD,
-          activeThumbColor: AppColors.primaryGreen,
+          activeTrackColor: AppColors.primaryBlue,
+          activeThumbColor: Colors.white,
           onChanged: (val) => setState(() => _isPwBD = val),
         ),
-        const Divider(color: AppColors.border),
 
-        // Ex-Serviceman
+        if (_isPwBD) ...[
+          const SizedBox(height: AppDimensions.space8),
+          DropdownButtonFormField<String>(
+            initialValue: _pwbdType ?? 'Locomotor Disability',
+            decoration: const InputDecoration(labelText: 'Disability Category / Type'),
+            items: const [
+              DropdownMenuItem(value: 'Locomotor Disability', child: Text('Locomotor Disability (OA/OL/OAL)')),
+              DropdownMenuItem(value: 'Visual Impairment', child: Text('Visual Impairment (Blindness/Low Vision)')),
+              DropdownMenuItem(value: 'Hearing Impairment', child: Text('Hearing Impairment (Deaf/Hard of Hearing)')),
+              DropdownMenuItem(value: 'Multiple Disabilities', child: Text('Multiple Disabilities')),
+            ],
+            onChanged: (val) => setState(() => _pwbdType = val),
+          ),
+          const SizedBox(height: AppDimensions.space16),
+        ],
+
+        const Divider(),
+        const SizedBox(height: AppDimensions.space12),
+
+        // Ex-Serviceman Toggle
         SwitchListTile(
           contentPadding: EdgeInsets.zero,
-          title: Text('Ex-Serviceman (ESM)', style: AppTypography.body),
-          subtitle: Text('Applicable for defence & security personnel quota and relaxations.', style: AppTypography.caption),
+          title: const Text('Ex-Serviceman (ESM)', style: TextStyle(fontWeight: FontWeight.w600)),
+          subtitle: const Text('Military service personnel eligible for defence & central recruitment relaxations.', style: TextStyle(fontSize: 12)),
           value: _isExServiceman,
-          activeThumbColor: AppColors.primaryGreen,
+          activeTrackColor: AppColors.primaryBlue,
+          activeThumbColor: Colors.white,
           onChanged: (val) => setState(() => _isExServiceman = val),
         ),
       ],
     );
   }
 
+  // ---------------------------------------------------------------------------
+  // STEP 3: Education
+  // ---------------------------------------------------------------------------
   Widget _buildStep3Education() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Educational Qualifications', style: AppTypography.screenTitle),
+        Text('Step 3: Educational Qualifications', style: AppTypography.screenTitle),
         const SizedBox(height: AppDimensions.space4),
-        Text('Accurate degree details prevent disqualification at document verification.', style: AppTypography.bodyMuted),
-        const SizedBox(height: AppDimensions.space20),
+        Text('Recruitment drives mandate specific degrees, branches, and minimum percentages.', style: AppTypography.bodyMuted),
+        const SizedBox(height: AppDimensions.space24),
 
         DropdownButtonFormField<String>(
-          value: _highestQualification,
-          decoration: const InputDecoration(labelText: 'Highest Qualification Level'),
-          items: const [
-            DropdownMenuItem(value: '10th / Matriculation', child: Text('10th / Matriculation')),
-            DropdownMenuItem(value: '12th / Intermediate', child: Text('12th / Intermediate')),
-            DropdownMenuItem(value: 'Diploma', child: Text('Diploma (Polytechnic)')),
-            DropdownMenuItem(value: 'B.Tech / B.E.', child: Text('B.Tech / B.E. (Engineering)')),
-            DropdownMenuItem(value: 'B.Sc / B.Com / B.A.', child: Text('Bachelor’s Degree (Arts/Science/Commerce)')),
-            DropdownMenuItem(value: 'M.Tech / M.E.', child: Text('Master’s in Engineering')),
-            DropdownMenuItem(value: 'M.Sc / M.Com / M.A.', child: Text('Master’s Degree')),
-            DropdownMenuItem(value: 'Ph.D', child: Text('Doctorate (Ph.D)')),
-          ],
-          onChanged: (val) => setState(() => _highestQualification = val!),
+          initialValue: _highestQualification,
+          decoration: const InputDecoration(labelText: 'Highest Qualification Attained / Pursuing'),
+          items: _qualifications.map((q) => DropdownMenuItem(value: q, child: Text(q))).toList(),
+          onChanged: (val) {
+            if (val != null) setState(() => _highestQualification = val);
+          },
         ),
         const SizedBox(height: AppDimensions.space16),
 
         TextField(
           controller: _degreeController,
-          decoration: const InputDecoration(labelText: 'Degree Name (e.g. B.Tech Computer Science)'),
+          decoration: const InputDecoration(
+            labelText: 'Degree Name',
+            hintText: 'e.g. Bachelor of Technology / B.Sc / M.A.',
+          ),
         ),
         const SizedBox(height: AppDimensions.space16),
 
         TextField(
           controller: _streamController,
-          decoration: const InputDecoration(labelText: 'Specialisation / Branch (e.g. Computer Science & Engg)'),
+          decoration: const InputDecoration(
+            labelText: 'Discipline / Branch / Stream',
+            hintText: 'e.g. Computer Science & Engineering / Mechanical',
+          ),
         ),
         const SizedBox(height: AppDimensions.space16),
 
         TextField(
-          controller: _universityController,
-          decoration: const InputDecoration(labelText: 'College / University Name'),
+          controller: _institutionController,
+          decoration: const InputDecoration(labelText: 'University or College Name'),
         ),
         const SizedBox(height: AppDimensions.space16),
 
@@ -457,100 +506,82 @@ class _ProfileWizardScreenState extends ConsumerState<ProfileWizardScreen> {
             Expanded(
               child: TextField(
                 controller: _cgpaController,
-                decoration: const InputDecoration(labelText: 'CGPA or %'),
-                keyboardType: TextInputType.number,
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                decoration: const InputDecoration(
+                  labelText: 'CGPA or %',
+                  hintText: 'e.g. 78.5 or 7.85',
+                ),
               ),
             ),
-            const SizedBox(width: AppDimensions.space12),
+            const SizedBox(width: AppDimensions.space16),
             Expanded(
               child: DropdownButtonFormField<int>(
-                value: _graduationYear,
+                initialValue: _graduationYear,
                 decoration: const InputDecoration(labelText: 'Graduation Year'),
-                items: [2021, 2022, 2023, 2024, 2025, 2026, 2027]
+                items: List.generate(12, (i) => 2018 + i)
                     .map((yr) => DropdownMenuItem(value: yr, child: Text('$yr')))
                     .toList(),
-                onChanged: (val) => setState(() => _graduationYear = val!),
+                onChanged: (val) {
+                  if (val != null) setState(() => _graduationYear = val);
+                },
               ),
             ),
           ],
         ),
         const SizedBox(height: AppDimensions.space16),
 
+        // Active Backlogs
         SwitchListTile(
           contentPadding: EdgeInsets.zero,
-          title: Text('Active Backlogs', style: AppTypography.body),
-          subtitle: Text('Certain PSUs and corporate drives require zero backlogs at joining.', style: AppTypography.caption),
+          title: const Text('Do you have active backlogs / supplementary exams?', style: TextStyle(fontWeight: FontWeight.w600)),
+          subtitle: const Text('Many central PSUs mandate zero active backlogs at time of application.', style: TextStyle(fontSize: 12)),
           value: _hasActiveBacklogs,
-          activeThumbColor: AppColors.primaryGreen,
+          activeTrackColor: AppColors.error,
+          activeThumbColor: Colors.white,
           onChanged: (val) => setState(() => _hasActiveBacklogs = val),
         ),
-      ],
-    );
-  }
+        const SizedBox(height: AppDimensions.space12),
 
-  Widget _buildStep4Qualifications() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text('Competitive Scores & Certifications', style: AppTypography.screenTitle),
-        const SizedBox(height: AppDimensions.space4),
-        Text('Unlocks direct PSU entry, premier fellowships and executive appointments.', style: AppTypography.bodyMuted),
-        const SizedBox(height: AppDimensions.space20),
-
+        // Optional GATE Score
         TextField(
           controller: _gateScoreController,
-          decoration: const InputDecoration(labelText: 'GATE Score (out of 1000, optional)'),
           keyboardType: TextInputType.number,
-        ),
-        const SizedBox(height: AppDimensions.space16),
-
-        SwitchListTile(
-          contentPadding: EdgeInsets.zero,
-          title: Text('UGC / CSIR NET / JRF Qualified', style: AppTypography.body),
-          subtitle: Text('Required for Assistant Professor, Junior Research Fellowships and PMRF.', style: AppTypography.caption),
-          value: _hasNetJrf,
-          activeThumbColor: AppColors.primaryGreen,
-          onChanged: (val) => setState(() => _hasNetJrf = val),
-        ),
-        const SizedBox(height: AppDimensions.space16),
-
-        TextField(
-          controller: _workExpController,
-          decoration: const InputDecoration(labelText: 'Total Relevant Work Experience (in Years)'),
-          keyboardType: TextInputType.number,
+          decoration: const InputDecoration(
+            labelText: 'Valid GATE Score (Optional)',
+            hintText: 'e.g. 680 (For DRDO / IOCL / BARC entries)',
+          ),
         ),
       ],
     );
   }
 
-  Widget _buildStep5Preferences() {
+  // ---------------------------------------------------------------------------
+  // STEP 4: Career Preferences
+  // ---------------------------------------------------------------------------
+  Widget _buildStep4Preferences() {
+    final theme = Theme.of(context);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Target Opportunities & Interests', style: AppTypography.screenTitle),
+        Text('Step 4: Career Preferences', style: AppTypography.screenTitle),
         const SizedBox(height: AppDimensions.space4),
-        Text('Calibrates your personal recommendation feed and instant alerts.', style: AppTypography.bodyMuted),
-        const SizedBox(height: AppDimensions.space20),
+        Text('Choose the opportunity categories and disciplines you wish to prioritize.', style: AppTypography.bodyMuted),
+        const SizedBox(height: AppDimensions.space24),
 
-        Text('OPPORTUNITY TYPES', style: AppTypography.label.copyWith(color: AppColors.textSubtle)),
-        const SizedBox(height: AppDimensions.space8),
+        Text('Preferred Opportunity Types', style: theme.textTheme.titleSmall),
+        const SizedBox(height: AppDimensions.space12),
+
         Wrap(
-          spacing: AppDimensions.space8,
-          runSpacing: AppDimensions.space8,
-          children: OpportunityCategory.values.map((cat) {
+          spacing: 8,
+          runSpacing: 8,
+          children: ExaminationCategory.values.map((cat) {
             final isSelected = _selectedCategories.contains(cat);
             return FilterChip(
               label: Text(cat.label),
               selected: isSelected,
-              selectedColor: AppColors.secondaryGreen,
-              backgroundColor: AppColors.secondaryBackground,
-              labelStyle: AppTypography.caption.copyWith(
-                color: isSelected ? AppColors.textMain : AppColors.textMuted,
-              ),
-              shape: RoundedRectangleBorder(
-                borderRadius: AppDimensions.roundedSmall,
-                side: BorderSide(color: isSelected ? AppColors.primaryGreen : AppColors.border),
-              ),
+              selectedColor: AppColors.primaryBlueLight,
+              checkmarkColor: AppColors.primaryBlueDark,
               onSelected: (selected) {
                 setState(() {
                   if (selected) {
@@ -563,27 +594,21 @@ class _ProfileWizardScreenState extends ConsumerState<ProfileWizardScreen> {
             );
           }).toList(),
         ),
-        const SizedBox(height: AppDimensions.space20),
+        const SizedBox(height: AppDimensions.space24),
 
-        Text('CAREER DOMAINS', style: AppTypography.label.copyWith(color: AppColors.textSubtle)),
-        const SizedBox(height: AppDimensions.space8),
+        Text('Career & Academic Disciplines', style: theme.textTheme.titleSmall),
+        const SizedBox(height: AppDimensions.space12),
+
         Wrap(
-          spacing: AppDimensions.space8,
-          runSpacing: AppDimensions.space8,
+          spacing: 8,
+          runSpacing: 8,
           children: _availableInterests.map((interest) {
             final isSelected = _careerInterests.contains(interest);
             return FilterChip(
               label: Text(interest),
               selected: isSelected,
-              selectedColor: AppColors.secondaryGreen,
-              backgroundColor: AppColors.secondaryBackground,
-              labelStyle: AppTypography.caption.copyWith(
-                color: isSelected ? AppColors.textMain : AppColors.textMuted,
-              ),
-              shape: RoundedRectangleBorder(
-                borderRadius: AppDimensions.roundedSmall,
-                side: BorderSide(color: isSelected ? AppColors.primaryGreen : AppColors.border),
-              ),
+              selectedColor: AppColors.primaryBlueLight,
+              checkmarkColor: AppColors.primaryBlueDark,
               onSelected: (selected) {
                 setState(() {
                   if (selected) {
@@ -596,24 +621,104 @@ class _ProfileWizardScreenState extends ConsumerState<ProfileWizardScreen> {
             );
           }).toList(),
         ),
-        const SizedBox(height: AppDimensions.space20),
+        const SizedBox(height: AppDimensions.space24),
 
-        TextField(
-          controller: _maxFeeBudgetController,
-          decoration: const InputDecoration(labelText: 'Maximum Application Fee Budget (₹ INR, optional)'),
-          keyboardType: TextInputType.number,
-        ),
-        const SizedBox(height: AppDimensions.space16),
-
+        // Relocation Toggle
         SwitchListTile(
           contentPadding: EdgeInsets.zero,
-          title: Text('Willing to Relocate Anywhere in India', style: AppTypography.body),
-          subtitle: Text('Expands matching to central cadres and nationwide PSU postings.', style: AppTypography.caption),
+          title: const Text('Willing to work anywhere in India', style: TextStyle(fontWeight: FontWeight.w600)),
+          subtitle: const Text('Central government & PSU services allocate pan-India postings.', style: TextStyle(fontSize: 12)),
           value: _willingToRelocate,
-          activeThumbColor: AppColors.primaryGreen,
+          activeTrackColor: AppColors.primaryBlue,
+          activeThumbColor: Colors.white,
           onChanged: (val) => setState(() => _willingToRelocate = val),
         ),
+        const SizedBox(height: AppDimensions.space12),
+
+        TextField(
+          controller: _maxFeeController,
+          keyboardType: TextInputType.number,
+          decoration: const InputDecoration(
+            labelText: 'Maximum Application Fee Budget (₹)',
+            hintText: 'e.g. 1000',
+          ),
+        ),
       ],
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // STEP 5: Completion
+  // ---------------------------------------------------------------------------
+  Widget _buildStep5Completion() {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const SizedBox(height: AppDimensions.space24),
+          Container(
+            width: 72,
+            height: 72,
+            decoration: BoxDecoration(
+              color: AppColors.successLight,
+              shape: BoxShape.circle,
+              border: Border.all(color: AppColors.success.withValues(alpha: 0.3)),
+            ),
+            child: const Icon(Icons.check_circle_outline, size: 44, color: AppColors.success),
+          ),
+          const SizedBox(height: AppDimensions.space24),
+
+          Text(
+            'Your Rexam profile is ready.',
+            textAlign: TextAlign.center,
+            style: AppTypography.screenTitle.copyWith(fontSize: 24),
+          ),
+          const SizedBox(height: AppDimensions.space12),
+
+          Text(
+            'We have recorded your educational profile, reservation relaxations, and career preferences.\n\nOpportunities will now automatically compute deterministic eligibility verdicts tailored to you.',
+            textAlign: TextAlign.center,
+            style: AppTypography.bodyMuted.copyWith(height: 1.5),
+          ),
+          const SizedBox(height: AppDimensions.space24),
+
+          // Summary Card
+          Container(
+            padding: const EdgeInsets.all(AppDimensions.space16),
+            decoration: BoxDecoration(
+              color: isDark ? AppColors.darkSurface : Colors.white,
+              borderRadius: AppDimensions.roundedDefault,
+              border: Border.all(color: theme.colorScheme.outline),
+            ),
+            child: Column(
+              children: [
+                _buildSummaryRow('Candidate Name', _nameController.text.trim()),
+                _buildSummaryRow('Qualification', '$_highestQualification ($_graduationYear)'),
+                _buildSummaryRow('Stream / Branch', _streamController.text.trim()),
+                _buildSummaryRow('Social Category', _socialCategory),
+                _buildSummaryRow('Calculated Age', '${_calculatedAge ?? "N/A"} Years'),
+              ],
+            ),
+          ),
+          const SizedBox(height: AppDimensions.space24),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSummaryRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label, style: AppTypography.caption),
+          Text(value, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+        ],
+      ),
     );
   }
 }

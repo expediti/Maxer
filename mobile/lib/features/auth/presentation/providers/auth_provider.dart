@@ -3,7 +3,7 @@ import '../../data/auth_repository.dart';
 import '../../domain/auth_state.dart';
 
 final authRepositoryProvider = Provider<AuthRepository>((ref) {
-  return MockAuthRepository();
+  return SupabaseAuthRepository();
 });
 
 class AuthNotifier extends StateNotifier<AuthState> {

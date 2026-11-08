@@ -45,7 +45,7 @@ class _FilterSheetState extends State<FilterSheet> {
       _maxAge = null;
       _maxFee = null;
       _closingSoonOnly = false;
-      _sortOption = OpportunitySortOption.relevance;
+      _sortOption = OpportunitySortOption.latest;
     });
   }
 
@@ -67,11 +67,14 @@ class _FilterSheetState extends State<FilterSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     return Container(
-      decoration: const BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(AppDimensions.radiusLarge)),
-        border: Border(top: BorderSide(color: AppColors.border)),
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.darkSurface : Colors.white,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(AppDimensions.radiusLarge)),
+        border: Border(top: BorderSide(color: theme.colorScheme.outline)),
       ),
       padding: const EdgeInsets.all(AppDimensions.space20),
       child: SafeArea(
@@ -87,121 +90,86 @@ class _FilterSheetState extends State<FilterSheet> {
                   Text('Filters & Sorting', style: AppTypography.screenTitle),
                   TextButton(
                     onPressed: _reset,
-                    child: Text('Reset All', style: AppTypography.caption.copyWith(color: AppColors.textMuted)),
+                    child: const Text('Reset All'),
                   ),
                 ],
               ),
-              const Divider(color: AppColors.border),
+              Divider(color: theme.colorScheme.outline),
               const SizedBox(height: AppDimensions.space12),
 
               // Sort By
-              Text('SORT BY', style: AppTypography.label.copyWith(color: AppColors.textSubtle)),
+              Text('SORT ORDER', style: AppTypography.label.copyWith(color: AppColors.primaryBlue)),
               const SizedBox(height: AppDimensions.space8),
               Wrap(
-                spacing: AppDimensions.space8,
-                runSpacing: AppDimensions.space8,
+                spacing: 8,
+                runSpacing: 8,
                 children: OpportunitySortOption.values.map((sort) {
                   final isSelected = _sortOption == sort;
                   return ChoiceChip(
                     label: Text(sort.label),
                     selected: isSelected,
-                    selectedColor: AppColors.secondaryGreen,
-                    backgroundColor: AppColors.secondaryBackground,
-                    labelStyle: AppTypography.caption.copyWith(
-                      color: isSelected ? AppColors.textMain : AppColors.textMuted,
-                      fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: AppDimensions.roundedSmall,
-                      side: BorderSide(color: isSelected ? AppColors.primaryGreen : AppColors.border),
-                    ),
                     onSelected: (selected) {
                       if (selected) setState(() => _sortOption = sort);
                     },
                   );
                 }).toList(),
               ),
-              const SizedBox(height: AppDimensions.space16),
+              const SizedBox(height: AppDimensions.space20),
 
               // Category Filter
-              Text('OPPORTUNITY CATEGORY', style: AppTypography.label.copyWith(color: AppColors.textSubtle)),
+              Text('EXAMINATION CATEGORY', style: AppTypography.label.copyWith(color: AppColors.primaryBlue)),
               const SizedBox(height: AppDimensions.space8),
               Wrap(
-                spacing: AppDimensions.space8,
-                runSpacing: AppDimensions.space8,
-                children: OpportunityCategory.values.map((cat) {
+                spacing: 8,
+                runSpacing: 8,
+                children: ExaminationCategory.values.map((cat) {
                   final isSelected = _selectedCategory == cat;
-                  return FilterChip(
+                  return ChoiceChip(
                     label: Text(cat.label),
                     selected: isSelected,
-                    selectedColor: AppColors.secondaryGreen,
-                    backgroundColor: AppColors.secondaryBackground,
-                    labelStyle: AppTypography.caption.copyWith(
-                      color: isSelected ? AppColors.textMain : AppColors.textMuted,
-                      fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: AppDimensions.roundedSmall,
-                      side: BorderSide(color: isSelected ? AppColors.primaryGreen : AppColors.border),
-                    ),
                     onSelected: (selected) {
-                      setState(() {
-                        _selectedCategory = selected ? cat : null;
-                      });
+                      setState(() => _selectedCategory = selected ? cat : null);
                     },
                   );
                 }).toList(),
               ),
-              const SizedBox(height: AppDimensions.space16),
+              const SizedBox(height: AppDimensions.space20),
 
-              // Authority Type
-              Text('SECTOR / GOVERNANCE', style: AppTypography.label.copyWith(color: AppColors.textSubtle)),
+              // Governing Body Type
+              Text('JURISDICTION', style: AppTypography.label.copyWith(color: AppColors.primaryBlue)),
               const SizedBox(height: AppDimensions.space8),
               Row(
                 children: [
                   ChoiceChip(
-                    label: const Text('All Sectors'),
-                    selected: _isCentralGovt == null,
-                    selectedColor: AppColors.secondaryGreen,
-                    backgroundColor: AppColors.secondaryBackground,
-                    labelStyle: AppTypography.caption.copyWith(
-                      color: _isCentralGovt == null ? AppColors.textMain : AppColors.textMuted,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: AppDimensions.roundedSmall,
-                      side: BorderSide(color: _isCentralGovt == null ? AppColors.primaryGreen : AppColors.border),
-                    ),
-                    onSelected: (_) => setState(() => _isCentralGovt = null),
+                    label: const Text('Central Govt / PSUs'),
+                    selected: _isCentralGovt == true,
+                    onSelected: (selected) {
+                      setState(() => _isCentralGovt = selected ? true : null);
+                    },
                   ),
                   const SizedBox(width: AppDimensions.space8),
                   ChoiceChip(
-                    label: const Text('Central Govt / PSU'),
-                    selected: _isCentralGovt == true,
-                    selectedColor: AppColors.secondaryGreen,
-                    backgroundColor: AppColors.secondaryBackground,
-                    labelStyle: AppTypography.caption.copyWith(
-                      color: _isCentralGovt == true ? AppColors.textMain : AppColors.textMuted,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: AppDimensions.roundedSmall,
-                      side: BorderSide(color: _isCentralGovt == true ? AppColors.primaryGreen : AppColors.border),
-                    ),
-                    onSelected: (_) => setState(() => _isCentralGovt = true),
+                    label: const Text('State Services'),
+                    selected: _isCentralGovt == false,
+                    onSelected: (selected) {
+                      setState(() => _isCentralGovt = selected ? false : null);
+                    },
                   ),
                 ],
               ),
-              const SizedBox(height: AppDimensions.space16),
+              const SizedBox(height: AppDimensions.space20),
 
-              // Closing Soon Toggle
+              // Toggles
               SwitchListTile(
                 contentPadding: EdgeInsets.zero,
-                title: Text('Closing Soon (Next 15 Days)', style: AppTypography.body),
-                subtitle: Text('Show opportunities whose application window is concluding', style: AppTypography.caption),
+                title: const Text('Closing Soon (Next 15 Days)', style: TextStyle(fontWeight: FontWeight.w600)),
                 value: _closingSoonOnly,
-                activeThumbColor: AppColors.primaryGreen,
+                activeTrackColor: AppColors.primaryBlue,
+                activeThumbColor: Colors.white,
                 onChanged: (val) => setState(() => _closingSoonOnly = val),
               ),
-              const SizedBox(height: AppDimensions.space20),
+
+              const SizedBox(height: AppDimensions.space24),
 
               // Apply Button
               ElevatedButton(

@@ -1,30 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_dimensions.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/utils/currency_formatter.dart';
-import '../../../core/utils/date_formatter.dart';
+import '../../auth/presentation/providers/auth_provider.dart';
 import 'providers/profile_provider.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
 
-  void _showDeleteAccountDialog(BuildContext context, WidgetRef ref) {
+  void _showLogoutDialog(BuildContext context, WidgetRef ref) {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: AppColors.surface,
-        shape: RoundedRectangleBorder(
-          borderRadius: AppDimensions.roundedDefault,
-          side: const BorderSide(color: AppColors.border),
-        ),
-        title: Text('Delete Candidate Account', style: AppTypography.screenTitle.copyWith(color: AppColors.error)),
-        content: Text(
-          'This action is irreversible. All your profile attributes, bookmarked opportunities, and application tracker logs will be permanently deleted.',
-          style: AppTypography.bodyMuted,
-        ),
+        title: const Text('Sign Out'),
+        content: const Text('Are you sure you want to end your current session?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
@@ -32,14 +25,12 @@ class ProfileScreen extends ConsumerWidget {
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
-            onPressed: () {
+            onPressed: () async {
               Navigator.of(ctx).pop();
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Account deletion requested.')),
-              );
-              context.go('/auth');
+              await ref.read(authProvider.notifier).signOut();
+              if (context.mounted) context.go('/welcome');
             },
-            child: const Text('Delete Account'),
+            child: const Text('Sign Out'),
           ),
         ],
       ),
@@ -48,219 +39,267 @@ class ProfileScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     final profileAsync = ref.watch(profileProvider);
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
         title: const Text('Candidate Profile'),
         actions: [
           IconButton(
             icon: const Icon(Icons.settings_outlined),
+            tooltip: 'Settings',
             onPressed: () => context.go('/settings'),
           ),
         ],
       ),
       body: SafeArea(
         child: profileAsync.when(
-          data: (profile) => SingleChildScrollView(
-            padding: const EdgeInsets.all(AppDimensions.space16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Top Profile Header Card
-                Container(
-                  padding: const EdgeInsets.all(AppDimensions.space16),
-                  decoration: BoxDecoration(
-                    color: AppColors.surface,
-                    borderRadius: AppDimensions.roundedDefault,
-                    border: Border.all(color: AppColors.border),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Column(
+          data: (profile) {
+            final initials = profile.fullName.trim().isNotEmpty
+                ? profile.fullName.trim().split(' ').map((e) => e.isNotEmpty ? e[0] : '').take(2).join()
+                : 'C';
+            final completion = profile.completionPercentage;
+
+            return SingleChildScrollView(
+              padding: const EdgeInsets.all(AppDimensions.space16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Top Profile Identity Card
+                  Container(
+                    padding: const EdgeInsets.all(AppDimensions.space16),
+                    decoration: BoxDecoration(
+                      color: theme.cardColor,
+                      borderRadius: AppDimensions.roundedDefault,
+                      border: Border.all(color: theme.colorScheme.outline),
+                    ),
+                    child: Column(
+                      children: [
+                        Row(
+                          children: [
+                            CircleAvatar(
+                              radius: 28,
+                              backgroundColor: AppColors.primaryBlue,
+                              child: Text(
+                                initials,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: AppDimensions.space16),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    profile.fullName.isNotEmpty ? profile.fullName : 'Candidate',
+                                    style: AppTypography.screenTitle.copyWith(fontSize: 18),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    profile.email,
+                                    style: AppTypography.caption.copyWith(
+                                      color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 6),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: isDark ? AppColors.darkSecondaryBackground : AppColors.lightSecondaryBackground,
+                                      borderRadius: AppDimensions.roundedSmall,
+                                      border: Border.all(color: theme.colorScheme.outline),
+                                    ),
+                                    child: Text(
+                                      '${profile.socialCategory} • ${profile.highestQualification ?? "Graduate"}',
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w600,
+                                        color: isDark ? AppColors.darkTextMain : AppColors.lightTextMain,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: AppDimensions.space16),
+
+                        // Profile Completion Progress Bar
+                        Container(
+                          padding: const EdgeInsets.all(AppDimensions.space12),
+                          decoration: BoxDecoration(
+                            color: isDark ? AppColors.darkSecondaryBackground : AppColors.lightSecondaryBackground,
+                            borderRadius: AppDimensions.roundedDefault,
+                          ),
+                          child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(profile.fullName, style: AppTypography.screenTitle),
-                              const SizedBox(height: AppDimensions.space2),
-                              Text(profile.email, style: AppTypography.caption.copyWith(color: AppColors.textMuted)),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  const Text('Profile Completeness', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                                  Text(
+                                    '$completion%',
+                                    style: const TextStyle(color: AppColors.primaryBlue, fontWeight: FontWeight.bold, fontSize: 12),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 6),
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(3),
+                                child: LinearProgressIndicator(
+                                  value: completion / 100.0,
+                                  backgroundColor: isDark ? AppColors.darkBorder : AppColors.lightBorder,
+                                  valueColor: const AlwaysStoppedAnimation<Color>(AppColors.primaryBlue),
+                                  minHeight: 6,
+                                ),
+                              ),
                             ],
                           ),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: AppDimensions.space8, vertical: AppDimensions.space4),
-                            decoration: BoxDecoration(
-                              color: AppColors.secondaryBackground,
-                              borderRadius: AppDimensions.roundedSmall,
-                              border: Border.all(color: AppColors.border),
-                            ),
-                            child: Text(
-                              profile.socialCategory,
-                              style: AppTypography.caption.copyWith(color: AppColors.primaryGreen, fontWeight: FontWeight.w600),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: AppDimensions.space16),
+                        ),
+                        const SizedBox(height: AppDimensions.space12),
 
-                      // Completion Bar
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text('PROFILE COMPLETION', style: AppTypography.label.copyWith(color: AppColors.textSubtle, fontSize: 10)),
-                          Text('${profile.completionPercentage}%', style: AppTypography.caption.copyWith(color: AppColors.primaryGreen, fontWeight: FontWeight.bold)),
-                        ],
-                      ),
-                      const SizedBox(height: AppDimensions.space6),
-                      LinearProgressIndicator(
-                        value: profile.completionPercentage / 100,
-                        backgroundColor: AppColors.secondaryBackground,
-                        valueColor: const AlwaysStoppedAnimation<Color>(AppColors.primaryGreen),
-                        minHeight: 4,
-                      ),
-                      const SizedBox(height: AppDimensions.space16),
+                        // Edit Profile Button
+                        OutlinedButton.icon(
+                          onPressed: () => context.go('/profile/wizard'),
+                          icon: const Icon(Icons.edit_outlined, size: 16),
+                          label: const Text('Edit Profile & Qualifications'),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: AppDimensions.space20),
 
-                      OutlinedButton.icon(
-                        icon: const Icon(Icons.edit_outlined, size: 16),
-                        label: const Text('Edit Profile Attributes (Setup Wizard)'),
-                        onPressed: () => context.go('/profile/wizard'),
-                      ),
+                  // Section 1: Demographics & Personal Info
+                  _buildSectionTitle('Personal Demographics'),
+                  const SizedBox(height: AppDimensions.space8),
+                  _buildInfoCard(
+                    theme,
+                    [
+                      _buildInfoRow('Full Name', profile.fullName),
+                      _buildInfoRow('Date of Birth', profile.dateOfBirth != null ? DateFormat('d MMMM yyyy').format(profile.dateOfBirth!) : 'Not set'),
+                      _buildInfoRow('Calculated Age', '${profile.calculateAge() ?? "N/A"} Years'),
+                      _buildInfoRow('Gender', profile.gender ?? 'Not set'),
+                      _buildInfoRow('Nationality', profile.nationality),
+                      _buildInfoRow('State of Domicile', profile.state ?? 'All India'),
+                      _buildInfoRow('District', profile.district ?? 'Not set'),
                     ],
                   ),
-                ),
-                const SizedBox(height: AppDimensions.space20),
+                  const SizedBox(height: AppDimensions.space20),
 
-                // Section A: Personal & Domicile
-                _buildSectionTitle('A. Personal & Domicile Information'),
-                _buildInfoCard([
-                  _buildDataRow('Date of Birth', profile.dateOfBirth != null ? DateFormatter.formatDate(profile.dateOfBirth) : 'Not specified'),
-                  _buildDataRow('Age Today', profile.ageInYears != null ? '${profile.ageInYears} years' : 'N/A'),
-                  _buildDataRow('Gender', profile.gender ?? 'Not specified'),
-                  _buildDataRow('Nationality', profile.nationality),
-                  _buildDataRow('State / Domicile', profile.state ?? 'Not specified'),
-                  _buildDataRow('District', profile.district ?? 'Not specified'),
-                ]),
-                const SizedBox(height: AppDimensions.space16),
-
-                // Section B: Category & Statutory Relaxations
-                _buildSectionTitle('B. Category & Reservation Attributes'),
-                _buildInfoCard([
-                  _buildDataRow('Social Category', profile.socialCategory),
-                  _buildDataRow('PwBD Status', profile.isPwBD ? 'Yes (Benchmark Disability)' : 'No'),
-                  _buildDataRow('Ex-Serviceman (ESM)', profile.isExServiceman ? 'Yes' : 'No'),
-                ]),
-                const SizedBox(height: AppDimensions.space16),
-
-                // Section C: Educational Background
-                _buildSectionTitle('C. Educational Background'),
-                _buildInfoCard([
-                  _buildDataRow('Highest Qualification', profile.highestQualification ?? 'Not specified'),
-                  _buildDataRow('Degree Name', profile.degreeName ?? 'Not specified'),
-                  _buildDataRow('Discipline / Branch', profile.stream ?? 'Not specified'),
-                  _buildDataRow('College / University', profile.universityOrCollege ?? 'Not specified'),
-                  _buildDataRow('Graduation Year', profile.graduationYear != null ? '${profile.graduationYear}' : 'N/A'),
-                  _buildDataRow('Percentage / CGPA', profile.cgpaOrPercentage != null ? '${profile.cgpaOrPercentage}%' : 'N/A'),
-                  _buildDataRow('Active Backlogs', profile.hasActiveBacklogs ? 'Yes' : 'Zero (Clean record)'),
-                ]),
-                const SizedBox(height: AppDimensions.space16),
-
-                // Section D: Competitive Exam Scores & Certifications
-                _buildSectionTitle('D. Competitive Examination Scores'),
-                _buildInfoCard([
-                  _buildDataRow('GATE Score', profile.gateScore != null ? '${profile.gateScore} (Year ${profile.gateYear ?? 2025})' : 'Not appeared / Not entered'),
-                  _buildDataRow('NET / JRF', profile.hasNetJrf ? 'Qualified' : 'No'),
-                  _buildDataRow('Work Experience', '${profile.workExperienceYears} Years'),
-                  if (profile.certifications.isNotEmpty)
-                    _buildDataRow('Certifications', profile.certifications.join(', ')),
-                ]),
-                const SizedBox(height: AppDimensions.space16),
-
-                // Section E: Opportunity & Financial Preferences
-                _buildSectionTitle('E. Opportunity & Relocation Preferences'),
-                _buildInfoCard([
-                  _buildDataRow('Target Opportunities', profile.preferredCategories.map((c) => c.label).join(', ')),
-                  _buildDataRow('Max Fee Budget', CurrencyFormatter.formatInr(profile.maxApplicationFeeBudget)),
-                  _buildDataRow('Willing to Relocate', profile.willingToRelocate ? 'Yes (All India)' : 'State Only'),
-                  _buildDataRow('Preferred States', profile.preferredStates.isNotEmpty ? profile.preferredStates.join(', ') : 'All India'),
-                ]),
-                const SizedBox(height: AppDimensions.space24),
-
-                // Privacy & Deletion Section
-                _buildSectionTitle('Privacy & Account Controls'),
-                Container(
-                  padding: const EdgeInsets.all(AppDimensions.space12),
-                  decoration: BoxDecoration(
-                    color: AppColors.secondaryBackground,
-                    borderRadius: AppDimensions.roundedDefault,
-                    border: Border.all(color: AppColors.border),
-                  ),
-                  child: Column(
-                    children: [
-                      ListTile(
-                        contentPadding: EdgeInsets.zero,
-                        leading: const Icon(Icons.security, size: 20, color: AppColors.textMuted),
-                        title: Text('Data Privacy & RLS Protection', style: AppTypography.cardTitle),
-                        subtitle: Text('Row Level Security ensures your credentials and profile are inaccessible to other candidates.', style: AppTypography.caption),
-                      ),
-                      const Divider(color: AppColors.border),
-                      ListTile(
-                        contentPadding: EdgeInsets.zero,
-                        leading: const Icon(Icons.delete_outline, size: 20, color: AppColors.error),
-                        title: Text('Delete Account and Profile', style: AppTypography.cardTitle.copyWith(color: AppColors.error)),
-                        subtitle: Text('Permanently purge your candidate attributes and tracking data.', style: AppTypography.caption),
-                        onTap: () => _showDeleteAccountDialog(context, ref),
-                      ),
+                  // Section 2: Educational Qualifications
+                  _buildSectionTitle('Educational Qualifications'),
+                  const SizedBox(height: AppDimensions.space8),
+                  _buildInfoCard(
+                    theme,
+                    [
+                      _buildInfoRow('Highest Qualification', profile.highestQualification ?? 'Not set'),
+                      _buildInfoRow('Degree Name', profile.degreeName ?? 'Not set'),
+                      _buildInfoRow('Discipline / Branch', profile.stream ?? 'Not set'),
+                      _buildInfoRow('University / College', profile.institution ?? 'Not set'),
+                      _buildInfoRow('Graduation Year', '${profile.graduationYear ?? "Not set"}'),
+                      _buildInfoRow('Score (CGPA / %)', profile.cgpaOrPercentage != null ? '${profile.cgpaOrPercentage}%' : 'Not set'),
+                      _buildInfoRow('Active Backlogs', profile.hasActiveBacklogs ? 'Yes (Active Backlogs)' : 'None (Clear record)'),
+                      if (profile.gateScore != null)
+                        _buildInfoRow('GATE Score', '${profile.gateScore}'),
+                      _buildInfoRow('NET / JRF Qualified', profile.hasNetJrf ? 'Yes' : 'No'),
                     ],
                   ),
-                ),
-                const SizedBox(height: AppDimensions.space32),
-              ],
-            ),
-          ),
-          loading: () => const Center(child: CircularProgressIndicator(color: AppColors.primaryGreen)),
-          error: (err, _) => Center(child: Text('Error: $err')),
+                  const SizedBox(height: AppDimensions.space20),
+
+                  // Section 3: Reservation and Relaxations
+                  _buildSectionTitle('Statutory Relaxations'),
+                  const SizedBox(height: AppDimensions.space8),
+                  _buildInfoCard(
+                    theme,
+                    [
+                      _buildInfoRow('Social Category', profile.socialCategory),
+                      _buildInfoRow('PwBD Status', profile.isPwBD ? 'Yes (${profile.pwbdDisabilityType ?? "Benchmark"})' : 'No'),
+                      _buildInfoRow('Ex-Serviceman (ESM)', profile.isExServiceman ? 'Yes' : 'No'),
+                    ],
+                  ),
+                  const SizedBox(height: AppDimensions.space20),
+
+                  // Section 4: Opportunity Preferences
+                  _buildSectionTitle('Opportunity Preferences'),
+                  const SizedBox(height: AppDimensions.space8),
+                  _buildInfoCard(
+                    theme,
+                    [
+                      _buildInfoRow('Preferred Categories', profile.preferredCategories.map((c) => c.label).join(', ')),
+                      _buildInfoRow('Career Disciplines', profile.careerInterests.join(', ')),
+                      _buildInfoRow('Pan-India Relocation', profile.willingToRelocate ? 'Yes (Pan-India)' : 'State Only'),
+                      _buildInfoRow('Max Application Fee Budget', CurrencyFormatter.format(profile.maxApplicationFeeBudget)),
+                    ],
+                  ),
+                  const SizedBox(height: AppDimensions.space24),
+
+                  // Sign Out Button
+                  OutlinedButton.icon(
+                    onPressed: () => _showLogoutDialog(context, ref),
+                    icon: const Icon(Icons.logout, size: 18, color: AppColors.error),
+                    label: const Text('Sign Out of Rexam', style: TextStyle(color: AppColors.error)),
+                    style: OutlinedButton.styleFrom(
+                      side: const BorderSide(color: AppColors.error),
+                    ),
+                  ),
+                  const SizedBox(height: AppDimensions.space32),
+                ],
+              ),
+            );
+          },
+          loading: () => const Center(child: CircularProgressIndicator(color: AppColors.primaryBlue)),
+          error: (err, stack) => Center(child: Text('Error loading profile: $err')),
         ),
       ),
     );
   }
 
   Widget _buildSectionTitle(String title) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: AppDimensions.space8),
-      child: Text(
-        title,
-        style: AppTypography.sectionHeader.copyWith(color: AppColors.primaryGreen),
-      ),
+    return Row(
+      children: [
+        Container(width: 3, height: 16, color: AppColors.primaryBlue),
+        const SizedBox(width: AppDimensions.space8),
+        Text(title, style: AppTypography.sectionHeader),
+      ],
     );
   }
 
-  Widget _buildInfoCard(List<Widget> children) {
+  Widget _buildInfoCard(ThemeData theme, List<Widget> rows) {
     return Container(
-      padding: const EdgeInsets.all(AppDimensions.space12),
+      padding: const EdgeInsets.all(AppDimensions.space16),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: theme.cardColor,
         borderRadius: AppDimensions.roundedDefault,
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: theme.colorScheme.outline),
       ),
-      child: Column(children: children),
+      child: Column(children: rows),
     );
   }
 
-  Widget _buildDataRow(String label, String value) {
+  Widget _buildInfoRow(String label, String value) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: AppDimensions.space4),
+      padding: const EdgeInsets.symmetric(vertical: 6.0),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          SizedBox(
-            width: 140,
-            child: Text(label, style: AppTypography.caption.copyWith(color: AppColors.textMuted)),
-          ),
+          Expanded(flex: 2, child: Text(label, style: AppTypography.caption)),
           Expanded(
-            child: Text(value, style: AppTypography.body.copyWith(fontSize: 13, fontWeight: FontWeight.w500)),
+            flex: 3,
+            child: Text(
+              value,
+              textAlign: TextAlign.right,
+              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+            ),
           ),
         ],
       ),

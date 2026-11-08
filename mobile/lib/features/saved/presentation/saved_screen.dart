@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:rexam/core/constants/app_colors.dart';
-import 'package:rexam/core/constants/app_dimensions.dart';
-import 'package:rexam/core/theme/app_typography.dart';
-import 'package:rexam/features/saved/presentation/providers/saved_provider.dart';
-import 'package:rexam/features/opportunities/presentation/widgets/opportunity_card.dart';
+import '../../../core/constants/app_colors.dart';
+import '../../../core/constants/app_dimensions.dart';
+import '../../../core/theme/app_typography.dart';
+import '../../../core/widgets/empty_state.dart';
+import '../presentation/providers/saved_provider.dart';
+import '../../opportunities/presentation/widgets/opportunity_card.dart';
 
 class SavedScreen extends ConsumerStatefulWidget {
   const SavedScreen({super.key});
@@ -20,6 +21,7 @@ class _SavedScreenState extends ConsumerState<SavedScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final savedItems = ref.watch(savedProvider);
 
     final filtered = savedItems.where((opp) {
@@ -30,19 +32,27 @@ class _SavedScreenState extends ConsumerState<SavedScreen> {
     }).toList();
 
     if (_sortByDeadline) {
-      filtered.sort((a, b) => a.applicationDeadline.compareTo(b.applicationDeadline));
+      filtered.sort((a, b) {
+        if (a.applicationDeadline == null) return 1;
+        if (b.applicationDeadline == null) return -1;
+        return a.applicationDeadline!.compareTo(b.applicationDeadline!);
+      });
     } else {
-      filtered.sort((a, b) => b.lastVerifiedAt.compareTo(a.lastVerifiedAt));
+      filtered.sort((a, b) {
+        final aTime = a.lastVerifiedAt ?? DateTime(2026);
+        final bTime = b.lastVerifiedAt ?? DateTime(2026);
+        return bTime.compareTo(aTime);
+      });
     }
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
-        title: const Text('Saved Opportunities'),
+        title: const Text('Saved Examinations'),
         actions: [
           IconButton(
-            icon: Icon(_sortByDeadline ? Icons.schedule : Icons.calendar_today, size: 20),
-            tooltip: _sortByDeadline ? 'Sorted by Deadline' : 'Sorted by Latest',
+            icon: Icon(_sortByDeadline ? Icons.schedule_rounded : Icons.calendar_today_rounded, size: 20),
+            tooltip: _sortByDeadline ? 'Sorted by Closing Deadline' : 'Sorted by Announcement Date',
             onPressed: () {
               setState(() => _sortByDeadline = !_sortByDeadline);
             },
@@ -62,7 +72,7 @@ class _SavedScreenState extends ConsumerState<SavedScreen> {
                 onChanged: (val) => setState(() => _searchQuery = val),
                 decoration: const InputDecoration(
                   hintText: 'Search within bookmarked opportunities...',
-                  prefixIcon: Icon(Icons.search, size: 20, color: AppColors.textMuted),
+                  prefixIcon: Icon(Icons.search, size: 20),
                 ),
               ),
             ),
@@ -74,56 +84,85 @@ class _SavedScreenState extends ConsumerState<SavedScreen> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    '${filtered.length} saved bookmarks',
-                    style: AppTypography.caption.copyWith(color: AppColors.textMuted),
+                    '${filtered.length} Saved Opportunities',
+                    style: AppTypography.caption,
                   ),
                   Text(
-                    _sortByDeadline ? 'Order: Closing Soonest' : 'Order: Recently Verified',
-                    style: AppTypography.caption.copyWith(color: AppColors.textSubtle, fontSize: 11),
+                    _sortByDeadline ? 'Closing Soonest' : 'Recently Announced',
+                    style: AppTypography.caption.copyWith(color: AppColors.primaryBlue, fontWeight: FontWeight.w600),
                   ),
                 ],
               ),
             ),
-            const Divider(color: AppColors.border),
+            Divider(color: theme.colorScheme.outline),
 
             // Content
             Expanded(
-              child: filtered.isEmpty
-                  ? Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
+              child: RefreshIndicator(
+                color: AppColors.primaryBlue,
+                onRefresh: () async {
+                  await ref.read(savedProvider.notifier).loadSaved();
+                },
+                child: filtered.isEmpty
+                    ? ListView(
+                        physics: const AlwaysScrollableScrollPhysics(),
                         children: [
-                          const Icon(Icons.bookmark_border, size: 48, color: AppColors.textMuted),
-                          const SizedBox(height: AppDimensions.space16),
-                          Text('No saved opportunities yet', style: AppTypography.sectionHeader),
-                          const SizedBox(height: AppDimensions.space4),
-                          Text(
-                            'Bookmark notifications from Discover to track their deadlines here.',
-                            style: AppTypography.bodyMuted,
-                            textAlign: TextAlign.center,
-                          ),
-                          const SizedBox(height: AppDimensions.space16),
-                          ElevatedButton(
-                            onPressed: () => context.go('/discover'),
-                            child: const Text('Explore Opportunities'),
+                          const SizedBox(height: 80),
+                          EmptyStateView(
+                            icon: Icons.bookmark_border_rounded,
+                            title: 'No Saved Examinations',
+                            description: _searchQuery.isNotEmpty
+                                ? 'No saved items match "$_searchQuery".'
+                                : 'Bookmark examinations you want to track to receive notifications and deadline alerts.',
+                            actionLabel: 'Explore Opportunities',
+                            onAction: () => context.go('/explorer'),
                           ),
                         ],
+                      )
+                    : ListView.builder(
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppDimensions.space16,
+                          vertical: AppDimensions.space8,
+                        ),
+                        itemCount: filtered.length,
+                        itemBuilder: (context, index) {
+                          final opp = filtered[index];
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: AppDimensions.space12),
+                            child: Dismissible(
+                              key: Key(opp.id),
+                              direction: DismissDirection.endToStart,
+                              background: Container(
+                                alignment: Alignment.centerRight,
+                                padding: const EdgeInsets.symmetric(horizontal: 20),
+                                decoration: BoxDecoration(
+                                  color: AppColors.error,
+                                  borderRadius: AppDimensions.roundedDefault,
+                                ),
+                                child: const Icon(Icons.delete_outline, color: Colors.white),
+                              ),
+                              onDismissed: (_) {
+                                ref.read(savedProvider.notifier).remove(opp.id);
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('Removed "${opp.title}" from saved.'),
+                                    action: SnackBarAction(
+                                      label: 'Undo',
+                                      onPressed: () => ref.read(savedProvider.notifier).toggleSave(opp),
+                                    ),
+                                  ),
+                                );
+                              },
+                              child: OpportunityCard(
+                                opportunity: opp,
+                                onTap: () => context.go('/opportunities/${opp.id}'),
+                              ),
+                            ),
+                          );
+                        },
                       ),
-                    )
-                  : ListView.builder(
-                      padding: const EdgeInsets.all(AppDimensions.space16),
-                      itemCount: filtered.length,
-                      itemBuilder: (context, index) {
-                        final opp = filtered[index];
-                        return Padding(
-                          padding: const EdgeInsets.only(bottom: AppDimensions.space12),
-                          child: OpportunityCard(
-                            opportunity: opp,
-                            onTap: () => context.go('/opportunities/${opp.id}'),
-                          ),
-                        );
-                      },
-                    ),
+              ),
             ),
           ],
         ),

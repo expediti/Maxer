@@ -69,6 +69,7 @@ CREATE TABLE IF NOT EXISTS public.candidate_preferences (
 CREATE TABLE IF NOT EXISTS public.organisations (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name TEXT NOT NULL UNIQUE,
+    slug TEXT UNIQUE,
     short_name TEXT,
     organisation_type TEXT NOT NULL, -- Central Government, State Government, PSU, Defence, Testing Agency, University, Corporate
     parent_ministry TEXT,
@@ -83,9 +84,10 @@ CREATE TABLE IF NOT EXISTS public.sources (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     organisation_id UUID REFERENCES public.organisations(id) ON DELETE CASCADE,
     name TEXT NOT NULL,
-    source_type TEXT NOT NULL, -- html, pdf, rss, sitemap
+    source_type TEXT NOT NULL DEFAULT 'html', -- html, pdf, rss, sitemap
     base_url TEXT NOT NULL UNIQUE,
-    crawler_adapter TEXT NOT NULL, -- upsc, ssc, isro, drdo, ibps, nta, rrb, generic
+    url TEXT,
+    crawler_adapter TEXT NOT NULL DEFAULT 'generic', -- upsc, ssc, isro, drdo, ibps, nta, rrb, generic
     is_active BOOLEAN NOT NULL DEFAULT TRUE,
     scrape_interval_hours INT NOT NULL DEFAULT 24,
     last_scanned_at TIMESTAMPTZ,
@@ -96,20 +98,24 @@ CREATE TABLE IF NOT EXISTS public.sources (
 -- 6. EXAMINATIONS (Core opportunity records)
 CREATE TABLE IF NOT EXISTS public.examinations (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    organisation_id UUID NOT NULL REFERENCES public.organisations(id) ON DELETE RESTRICT,
+    organisation_id UUID REFERENCES public.organisations(id) ON DELETE SET NULL,
     source_id UUID REFERENCES public.sources(id) ON DELETE SET NULL,
     name TEXT NOT NULL,
+    title TEXT,
     slug TEXT UNIQUE NOT NULL,
     category TEXT NOT NULL, -- Government Recruitment, PSU Recruitment, Entrance Examinations, University Admissions, Scholarships & Fellowships, Research & Internships, Private Jobs, Professional Certifications
     status TEXT NOT NULL DEFAULT 'published', -- draft, published, updated, expired, under_review
-    overview TEXT NOT NULL,
+    overview TEXT NOT NULL DEFAULT '',
     vacancies INT,
     salary_or_pay_scale TEXT,
     location TEXT NOT NULL DEFAULT 'All India',
     official_notification_url TEXT,
-    official_application_url TEXT NOT NULL,
-    source_url TEXT NOT NULL,
+    notification_url TEXT,
+    official_application_url TEXT NOT NULL DEFAULT '',
+    application_url TEXT,
+    source_url TEXT NOT NULL DEFAULT '',
     last_verified_at TIMESTAMPTZ NOT NULL DEFAULT TIMEZONE('utc', NOW()),
+    last_crawled_at TIMESTAMPTZ DEFAULT TIMEZONE('utc', NOW()),
     is_official_source BOOLEAN NOT NULL DEFAULT TRUE,
     is_confirmed BOOLEAN NOT NULL DEFAULT TRUE,
     is_central_government BOOLEAN NOT NULL DEFAULT TRUE,
@@ -134,6 +140,7 @@ CREATE TABLE IF NOT EXISTS public.examination_dates (
     correction_window_end TIMESTAMPTZ,
     admit_card_release_date DATE,
     examination_start_date DATE,
+    prelims_date DATE,
     examination_end_date DATE,
     result_date DATE,
     is_tentative BOOLEAN NOT NULL DEFAULT FALSE,
@@ -151,6 +158,7 @@ CREATE TABLE IF NOT EXISTS public.eligibility_rules (
     category_age_relaxations JSONB NOT NULL DEFAULT '{}'::jsonb,
     educational_qualifications TEXT[] NOT NULL DEFAULT '{}',
     eligible_branches TEXT[] NOT NULL DEFAULT '{}',
+    eligible_streams TEXT[] NOT NULL DEFAULT '{}',
     min_percentage NUMERIC(5,2),
     nationality TEXT NOT NULL DEFAULT 'Citizen of India',
     gender_requirements TEXT NOT NULL DEFAULT 'All genders eligible',
@@ -167,7 +175,7 @@ CREATE TABLE IF NOT EXISTS public.eligibility_rules (
 CREATE TABLE IF NOT EXISTS public.examination_documents (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     examination_id UUID NOT NULL REFERENCES public.examinations(id) ON DELETE CASCADE,
-    document_type TEXT NOT NULL, -- official_notification, corrigendum, syllabus, admit_card_notice, result_pdf
+    document_type TEXT NOT NULL DEFAULT 'official_notification', -- official_notification, corrigendum, syllabus, admit_card_notice, result_pdf
     title TEXT NOT NULL,
     file_url TEXT NOT NULL,
     sha256_hash TEXT NOT NULL,
@@ -194,6 +202,8 @@ CREATE TABLE IF NOT EXISTS public.saved_examinations (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     candidate_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
     examination_id UUID NOT NULL REFERENCES public.examinations(id) ON DELETE CASCADE,
+    notes TEXT,
+    saved_at TIMESTAMPTZ DEFAULT TIMEZONE('utc', NOW()),
     created_at TIMESTAMPTZ NOT NULL DEFAULT TIMEZONE('utc', NOW()),
     UNIQUE(candidate_id, examination_id)
 );
@@ -214,12 +224,18 @@ CREATE TABLE IF NOT EXISTS public.candidate_applications (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     candidate_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
     examination_id UUID NOT NULL REFERENCES public.examinations(id) ON DELETE CASCADE,
-    status TEXT NOT NULL DEFAULT 'Interested', -- Interested, Preparing Documents, Ready to Apply, Applied, Admit Card Released, Examination Completed, Result Declared, Selected, Rejected, Withdrawn
+    stage TEXT NOT NULL DEFAULT 'interested', -- interested, preparingDocuments, readyToApply, applied, admitCardReleased, examCompleted, resultDeclared, selected, rejected, withdrawn
+    status TEXT NOT NULL DEFAULT 'Interested',
     application_number TEXT,
-    applied_date TIMESTAMPTZ NOT NULL DEFAULT TIMEZONE('utc', NOW()),
+    roll_number TEXT,
+    applied_at TIMESTAMPTZ DEFAULT TIMEZONE('utc', NOW()),
+    applied_date TIMESTAMPTZ DEFAULT TIMEZONE('utc', NOW()),
     scheduled_exam_date DATE,
+    notes TEXT,
     personal_notes TEXT,
+    checklist_completed JSONB DEFAULT '[]'::jsonb,
     completed_checklist TEXT[] DEFAULT '{}',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT TIMEZONE('utc', NOW()),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT TIMEZONE('utc', NOW()),
     UNIQUE(candidate_id, examination_id)
 );
@@ -229,11 +245,16 @@ CREATE TABLE IF NOT EXISTS public.notifications (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     candidate_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
     examination_id UUID REFERENCES public.examinations(id) ON DELETE SET NULL,
+    type TEXT NOT NULL DEFAULT 'official',
+    notification_type TEXT NOT NULL DEFAULT 'official', -- upcomingDeadline, officialNotification, corrigendum, admitCard, result
     title TEXT NOT NULL,
-    message TEXT NOT NULL,
-    notification_type TEXT NOT NULL, -- upcoming_deadline, corrigendum, admit_card, result, recommendation
+    body TEXT,
+    message TEXT NOT NULL DEFAULT '',
     official_source_url TEXT,
     is_read BOOLEAN NOT NULL DEFAULT FALSE,
+    read_at TIMESTAMPTZ,
+    sent_at TIMESTAMPTZ DEFAULT TIMEZONE('utc', NOW()),
+    data JSONB DEFAULT '{}'::jsonb,
     delivered_via_fcm BOOLEAN NOT NULL DEFAULT FALSE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT TIMEZONE('utc', NOW())
 );
@@ -253,12 +274,16 @@ CREATE TABLE IF NOT EXISTS public.device_tokens (
 CREATE TABLE IF NOT EXISTS public.crawler_runs (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     source_id UUID REFERENCES public.sources(id) ON DELETE SET NULL,
-    source_name TEXT NOT NULL,
+    crawler_name TEXT,
+    source_name TEXT NOT NULL DEFAULT '',
     started_at TIMESTAMPTZ NOT NULL DEFAULT TIMEZONE('utc', NOW()),
     completed_at TIMESTAMPTZ,
-    status TEXT NOT NULL, -- RUNNING, COMPLETED, FAILED
+    status TEXT NOT NULL, -- running, success, failed, COMPLETED
+    examinations_found INT NOT NULL DEFAULT 0,
+    examinations_updated INT NOT NULL DEFAULT 0,
     items_discovered INT NOT NULL DEFAULT 0,
     items_processed INT NOT NULL DEFAULT 0,
+    error_message TEXT,
     errors JSONB DEFAULT '[]'::jsonb
 );
 
@@ -266,10 +291,12 @@ CREATE TABLE IF NOT EXISTS public.crawler_runs (
 CREATE TABLE IF NOT EXISTS public.processed_documents (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     source_id UUID REFERENCES public.sources(id) ON DELETE SET NULL,
-    url TEXT NOT NULL UNIQUE,
-    sha256_hash TEXT NOT NULL,
+    examination_id UUID REFERENCES public.examinations(id) ON DELETE SET NULL,
+    url TEXT,
+    sha256_hash TEXT NOT NULL UNIQUE,
     document_title TEXT,
-    status TEXT NOT NULL DEFAULT 'PROCESSED', -- PENDING, PROCESSED, FAILED, MANUAL_REVIEW
+    extracted_fields JSONB DEFAULT '{}'::jsonb,
+    status TEXT NOT NULL DEFAULT 'PROCESSED', -- PENDING, PROCESSED, FAILED, MANUAL_REVIEW, success
     processing_error TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT TIMEZONE('utc', NOW())
 );
@@ -279,7 +306,9 @@ CREATE TABLE IF NOT EXISTS public.candidate_matches (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     candidate_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
     examination_id UUID NOT NULL REFERENCES public.examinations(id) ON DELETE CASCADE,
-    match_status TEXT NOT NULL, -- Eligible, Potentially Eligible, Not Eligible
+    match_status TEXT NOT NULL DEFAULT 'Eligible', -- Eligible, Potentially Eligible, Not Eligible
+    status TEXT NOT NULL DEFAULT 'eligible',
+    is_eligible BOOLEAN NOT NULL DEFAULT TRUE,
     match_score NUMERIC(5,2),
     reasons JSONB DEFAULT '[]'::jsonb,
     evaluated_at TIMESTAMPTZ NOT NULL DEFAULT TIMEZONE('utc', NOW()),
@@ -301,4 +330,3 @@ CREATE INDEX IF NOT EXISTS idx_saved_examinations_cand ON public.saved_examinati
 CREATE INDEX IF NOT EXISTS idx_candidate_applications_cand ON public.candidate_applications(candidate_id);
 CREATE INDEX IF NOT EXISTS idx_notifications_cand_read ON public.notifications(candidate_id, is_read);
 CREATE INDEX IF NOT EXISTS idx_processed_docs_hash ON public.processed_documents(sha256_hash);
-

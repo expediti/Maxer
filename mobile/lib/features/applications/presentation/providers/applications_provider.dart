@@ -1,71 +1,48 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:rexam/features/applications/domain/application_tracker.dart';
+import 'package:rexam/models/application_tracker.dart';
 import 'package:rexam/features/opportunities/domain/opportunity.dart';
-import 'package:rexam/features/opportunities/data/mock_opportunities_data.dart';
+import 'package:rexam/features/auth/presentation/providers/auth_provider.dart';
+import 'package:rexam/core/providers/repository_providers.dart';
+import 'package:rexam/repositories/application_repository.dart';
 
 class ApplicationsNotifier extends StateNotifier<List<ApplicationTrackerItem>> {
-  ApplicationsNotifier()
-      : super([
-          ApplicationTrackerItem(
-            id: 'app-tracker-001',
-            opportunityId: mockOpportunities[0].id,
-            opportunity: mockOpportunities[0],
-            status: ApplicationStatus.applied,
-            applicationNumber: 'UPSC-2026-948201',
-            appliedDate: DateTime(2026, 2, 18),
-            examDate: DateTime(2026, 5, 25),
-            personalNotes: 'OTR completed. Exam center: Delhi Central (Centre code: 08).',
-            completedChecklist: [
-              'Government Photo ID Uploaded',
-              'Class 10th Certificate Submitted',
-              'Application Fee Paid (₹100)',
-            ],
-            lastUpdated: DateTime(2026, 2, 18, 14, 20),
-          ),
-          ApplicationTrackerItem(
-            id: 'app-tracker-002',
-            opportunityId: mockOpportunities[1].id,
-            opportunity: mockOpportunities[1],
-            status: ApplicationStatus.preparingDocuments,
-            applicationNumber: null,
-            appliedDate: DateTime(2026, 2, 25),
-            examDate: DateTime(2026, 5, 10),
-            personalNotes: 'Need to get degree conversion certificate from DTU administration.',
-            completedChecklist: [
-              'Resume Drafted',
-            ],
-            lastUpdated: DateTime(2026, 3, 1, 10, 0),
-          ),
-          ApplicationTrackerItem(
-            id: 'app-tracker-003',
-            opportunityId: mockOpportunities[3].id,
-            opportunity: mockOpportunities[3],
-            status: ApplicationStatus.interested,
-            applicationNumber: null,
-            appliedDate: DateTime(2026, 3, 2),
-            examDate: null,
-            personalNotes: 'GATE scorecard verified (Score: 682, valid till 2028).',
-            completedChecklist: [],
-            lastUpdated: DateTime(2026, 3, 2, 16, 45),
-          ),
-        ]);
+  final ApplicationRepository applicationRepo;
+  final String candidateId;
+
+  ApplicationsNotifier({
+    required this.applicationRepo,
+    required this.candidateId,
+  }) : super([]) {
+    loadApplications();
+  }
+
+  Future<void> loadApplications() async {
+    try {
+      final list = await applicationRepo.getApplications(candidateId);
+      state = list;
+    } catch (_) {}
+  }
 
   ApplicationTrackerItem? getByOpportunityId(String opportunityId) {
     try {
-      return state.firstWhere((item) => item.opportunityId == opportunityId);
+      return state.firstWhere(
+        (item) => item.examinationId == opportunityId || item.examination.id == opportunityId || item.examination.slug == opportunityId,
+      );
     } catch (_) {
       return null;
     }
   }
 
-  void addOrUpdate({
+  Future<void> addOrUpdate({
     required Opportunity opportunity,
     required ApplicationStatus status,
     String? applicationNumber,
     String? notes,
     DateTime? examDate,
-  }) {
-    final existingIndex = state.indexWhere((item) => item.opportunityId == opportunity.id);
+  }) async {
+    final existingIndex = state.indexWhere(
+      (item) => item.examinationId == opportunity.id || item.examination.id == opportunity.id,
+    );
 
     if (existingIndex >= 0) {
       final existing = state[existingIndex];
@@ -79,11 +56,16 @@ class ApplicationsNotifier extends StateNotifier<List<ApplicationTrackerItem>> {
       final list = [...state];
       list[existingIndex] = updated;
       state = list;
+
+      await applicationRepo.updateApplicationStatus(existing.id, status);
+      if (notes != null) {
+        await applicationRepo.updateApplicationNotes(existing.id, notes);
+      }
     } else {
       final newItem = ApplicationTrackerItem(
         id: 'app-tracker-${DateTime.now().millisecondsSinceEpoch}',
-        opportunityId: opportunity.id,
-        opportunity: opportunity,
+        examinationId: opportunity.id,
+        examination: opportunity,
         status: status,
         applicationNumber: applicationNumber,
         appliedDate: DateTime.now(),
@@ -93,24 +75,40 @@ class ApplicationsNotifier extends StateNotifier<List<ApplicationTrackerItem>> {
         lastUpdated: DateTime.now(),
       );
       state = [newItem, ...state];
+
+      await applicationRepo.createApplication(
+        candidateId: candidateId,
+        examinationId: opportunity.id,
+        status: status,
+        applicationNumber: applicationNumber,
+        personalNotes: notes,
+      );
     }
   }
 
-  void updateStatus(String trackerId, ApplicationStatus newStatus) {
+  Future<void> updateStatus(String trackerId, ApplicationStatus newStatus) async {
     state = state.map((item) {
       if (item.id == trackerId) {
         return item.copyWith(status: newStatus, lastUpdated: DateTime.now());
       }
       return item;
     }).toList();
+
+    await applicationRepo.updateApplicationStatus(trackerId, newStatus);
   }
 
-  void remove(String trackerId) {
+  Future<void> remove(String trackerId) async {
     state = state.where((item) => item.id != trackerId).toList();
   }
 }
 
-final applicationsProvider =
-    StateNotifierProvider<ApplicationsNotifier, List<ApplicationTrackerItem>>((ref) {
-  return ApplicationsNotifier();
+final applicationsProvider = StateNotifierProvider<ApplicationsNotifier, List<ApplicationTrackerItem>>((ref) {
+  final appRepo = ref.watch(applicationRepositoryProvider);
+  final authState = ref.watch(authProvider);
+  final candidateId = authState.user?.id ?? 'candidate-rexam-001';
+
+  return ApplicationsNotifier(
+    applicationRepo: appRepo,
+    candidateId: candidateId,
+  );
 });

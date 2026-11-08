@@ -10,7 +10,7 @@ class DatabaseClient:
         self.client = None
         self._mock_processed_hashes: set[str] = set()
 
-        if not settings.SUPABASE_URL.startswith("https://demo-project"):
+        if settings.SUPABASE_URL and not settings.SUPABASE_URL.startswith("https://demo-project"):
             try:
                 from supabase import create_client, Client
                 self.client: Optional[Client] = create_client(
@@ -45,7 +45,7 @@ class DatabaseClient:
             return
 
         try:
-            self.client.table("processed_documents").upsert(doc_data).execute()
+            self.client.table("processed_documents").upsert(doc_data, on_conflict="sha256_hash").execute()
         except Exception as e:
             logger.error(f"Error saving processed document record: {e}")
 
@@ -55,7 +55,8 @@ class DatabaseClient:
             return org_data.get("id", "org-mock-id")
 
         try:
-            res = self.client.table("organisations").upsert(org_data, on_conflict="slug").execute()
+            conflict = "slug" if org_data.get("slug") else "name"
+            res = self.client.table("organisations").upsert(org_data, on_conflict=conflict).execute()
             if res.data:
                 return res.data[0]["id"]
         except Exception as e:
@@ -64,23 +65,29 @@ class DatabaseClient:
 
     def upsert_source(self, source_data: Dict[str, Any]) -> Optional[str]:
         if not self.is_connected or not self.client:
-            logger.info(f"[Dry-run] Upsert source: {source_data.get('url')}")
+            logger.info(f"[Dry-run] Upsert source: {source_data.get('base_url') or source_data.get('url')}")
             return source_data.get("id", "source-mock-id")
 
         try:
-            res = self.client.table("sources").upsert(source_data, on_conflict="url").execute()
+            if "base_url" not in source_data and "url" in source_data:
+                source_data["base_url"] = source_data["url"]
+            res = self.client.table("sources").upsert(source_data, on_conflict="base_url").execute()
             if res.data:
                 return res.data[0]["id"]
         except Exception as e:
-            logger.error(f"Error upserting source {source_data.get('url')}: {e}")
+            logger.error(f"Error upserting source {source_data.get('base_url')}: {e}")
         return None
 
     def upsert_examination(self, exam_data: Dict[str, Any]) -> Optional[str]:
         if not self.is_connected or not self.client:
-            logger.info(f"[Dry-run] Upsert examination: {exam_data.get('title')}")
+            logger.info(f"[Dry-run] Upsert examination: {exam_data.get('title') or exam_data.get('name')}")
             return exam_data.get("id", "exam-mock-id")
 
         try:
+            if "name" not in exam_data and "title" in exam_data:
+                exam_data["name"] = exam_data["title"]
+            if "title" not in exam_data and "name" in exam_data:
+                exam_data["title"] = exam_data["name"]
             res = self.client.table("examinations").upsert(exam_data, on_conflict="slug").execute()
             if res.data:
                 return res.data[0]["id"]
@@ -167,4 +174,3 @@ class DatabaseClient:
             return []
 
 db_client = DatabaseClient()
-

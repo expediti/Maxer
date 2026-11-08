@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_dimensions.dart';
 import '../../../core/theme/app_typography.dart';
+import '../../../core/supabase_client.dart';
 import 'providers/auth_provider.dart';
 
 class SplashScreen extends ConsumerStatefulWidget {
@@ -17,11 +18,11 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
   @override
   void initState() {
     super.initState();
-    _handleNavigation();
+    _initializeAppAndSession();
   }
 
-  Future<void> _handleNavigation() async {
-    // 1.5 second branded loading transition
+  Future<void> _initializeAppAndSession() async {
+    // 1. Branded loading delay for smooth visual transition
     await Future.delayed(const Duration(milliseconds: 1400));
     if (!mounted) return;
 
@@ -29,29 +30,39 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
 
     if (authState.isAuthenticated) {
       context.go('/discover');
-    } else if (!authState.hasCompletedOnboarding) {
-      context.go('/onboarding');
     } else {
-      context.go('/auth');
+      context.go('/welcome');
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: isDark ? AppColors.darkBackground : AppColors.lightBackground,
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             // Minimal brand symbol
             Container(
-              width: 56,
-              height: 56,
+              width: 58,
+              height: 58,
               decoration: BoxDecoration(
-                color: AppColors.surface,
+                color: isDark ? AppColors.darkSurface : Colors.white,
                 borderRadius: AppDimensions.roundedDefault,
-                border: Border.all(color: AppColors.border, width: 1.5),
+                border: Border.all(
+                  color: isDark ? AppColors.darkBorder : AppColors.lightBorder,
+                  width: 1.5,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: isDark ? 0.25 : 0.05),
+                    blurRadius: 10,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
               ),
               child: Center(
                 child: Container(
@@ -59,29 +70,31 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
                   height: 22,
                   decoration: const BoxDecoration(
                     shape: BoxShape.circle,
-                    color: AppColors.primaryGreen,
+                    color: AppColors.primaryBlue,
                   ),
                 ),
               ),
             ),
             const SizedBox(height: AppDimensions.space20),
 
-            // REXAM Wordmark
+            // REXAM Wordmark (Checked by widget tests)
             Text(
               'REXAM',
               style: AppTypography.brandTitle.copyWith(
                 fontSize: 26,
                 letterSpacing: 4.0,
                 fontWeight: FontWeight.w800,
+                color: isDark ? AppColors.darkTextMain : AppColors.lightTextMain,
               ),
             ),
             const SizedBox(height: AppDimensions.space8),
 
-            // Subtitle
+            // Subtitle (Checked by widget tests)
             Text(
               'Indian Examination & Opportunity Intelligence',
+              textAlign: TextAlign.center,
               style: AppTypography.caption.copyWith(
-                color: AppColors.textMuted,
+                color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
                 letterSpacing: 0.5,
               ),
             ),
@@ -89,11 +102,11 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
 
             // Restrained loading indicator
             const SizedBox(
-              width: 20,
-              height: 20,
+              width: 22,
+              height: 22,
               child: CircularProgressIndicator(
-                strokeWidth: 2.0,
-                valueColor: AlwaysStoppedAnimation<Color>(AppColors.primaryGreen),
+                strokeWidth: 2.2,
+                valueColor: AlwaysStoppedAnimation<Color>(AppColors.primaryBlue),
               ),
             ),
           ],
@@ -102,4 +115,3 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
     );
   }
 }
-

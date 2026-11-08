@@ -87,6 +87,8 @@ class CandidateProfile {
     this.careerInterests = const ['Engineering', 'Computer Science', 'Administration'],
   });
 
+  String? get universityOrCollege => institution;
+
   int? get ageInYears {
     if (dateOfBirth == null) return null;
     final now = DateTime.now();

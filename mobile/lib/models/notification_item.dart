@@ -1,18 +1,23 @@
 enum NotificationType {
-  upcomingDeadline('Upcoming Deadline'),
-  officialNotification('Official Notification'),
-  deadlineChange('Deadline Extension / Change'),
-  corrigendum('Corrigendum / Addendum'),
-  examDateChange('Examination Date Announced'),
+  newExamination('New Examination'),
+  applicationOpening('Application Opening'),
+  upcomingDeadline('Deadline Approaching'),
+  deadlineChange('Deadline Changed'),
   admitCard('Admit Card Released'),
-  result('Result Declared');
+  examDateChange('Exam Date Announced'),
+  result('Result Published'),
+  corrigendum('Official Corrigendum'),
+  correctionWindow('Correction Window'),
+  officialNotification('Official Notification');
 
   final String label;
   const NotificationType(this.label);
 
   static NotificationType fromString(String val) {
     for (final t in NotificationType.values) {
-      if (t.label.toLowerCase() == val.toLowerCase() || t.name.toLowerCase() == val.toLowerCase()) {
+      if (t.label.toLowerCase() == val.toLowerCase() ||
+          t.name.toLowerCase() == val.toLowerCase() ||
+          t.name.toLowerCase().contains(val.toLowerCase())) {
         return t;
       }
     }
@@ -63,4 +68,3 @@ class NotificationItem {
     );
   }
 }
-

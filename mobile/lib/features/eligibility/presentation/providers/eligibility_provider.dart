@@ -1,6 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rexam/features/opportunities/domain/opportunity.dart';
-import 'package:rexam/features/opportunities/data/mock_opportunities_data.dart';
+import 'package:rexam/features/opportunities/presentation/providers/opportunities_provider.dart';
 import 'package:rexam/features/eligibility/domain/eligibility_report.dart';
 import 'package:rexam/features/profile/domain/candidate_profile.dart';
 import 'package:rexam/features/profile/presentation/providers/profile_provider.dart';
@@ -25,17 +25,20 @@ class EligibilityEngine {
       final baseMin = opportunity.minAge;
       final baseMax = opportunity.maxAge;
 
-      if (candidateAge >= baseMin && candidateAge <= baseMax) {
+      if (baseMin == null && baseMax == null) {
         ageStatus = RuleCheckStatus.passed;
-        ageDetails = 'Candidate age ($candidateAge years) falls within standard limit ($baseMin–$baseMax years).';
-      } else if (candidateAge > baseMax) {
+        ageDetails = 'No age restriction specified in official gazette.';
+      } else if (baseMin != null && candidateAge < baseMin) {
+        ageStatus = RuleCheckStatus.failed;
+        ageDetails = 'Candidate age ($candidateAge years) is below minimum age requirement of $baseMin years.';
+      } else if (baseMax != null && candidateAge > baseMax) {
         // Check reservation relaxations
         int relaxationYears = 0;
         final category = candidate.socialCategory;
 
         if (category == 'SC' || category == 'ST') {
           relaxationYears = 5;
-        } else if (category == 'OBC-NCL') {
+        } else if (category == 'OBC-NCL' || category == 'OBC') {
           relaxationYears = 3;
         }
         if (candidate.isPwBD) {
@@ -55,8 +58,10 @@ class EligibilityEngine {
               'Candidate age ($candidateAge years) exceeds both general maximum ($baseMax) and category relaxed maximum ($relaxedMax years).';
         }
       } else {
-        ageStatus = RuleCheckStatus.failed;
-        ageDetails = 'Candidate age ($candidateAge years) is below minimum age requirement of $baseMin years.';
+        ageStatus = RuleCheckStatus.passed;
+        final minStr = baseMin != null ? '$baseMin' : 'any';
+        final maxStr = baseMax != null ? '$baseMax' : 'no upper limit';
+        ageDetails = 'Candidate age ($candidateAge years) falls within standard limit ($minStr–$maxStr years).';
       }
     }
 
@@ -64,7 +69,7 @@ class EligibilityEngine {
       criterionName: 'Age Limit & Cutoff',
       status: ageStatus,
       candidateValue: candidateAge != null ? '$candidateAge years (DOB: ${candidate.dateOfBirth?.day}/${candidate.dateOfBirth?.month}/${candidate.dateOfBirth?.year})' : 'Not specified',
-      requirement: '${opportunity.minAge} to ${opportunity.maxAge} years (Relaxation applicable)',
+      requirement: '${opportunity.minAge ?? 'N/A'} to ${opportunity.maxAge ?? 'N/A'} years (Relaxation applicable)',
       details: ageDetails,
       ruleEvidence: 'Official Notification Clause 3(b) "Age Limits & Category Relaxations".',
     ));
@@ -222,7 +227,12 @@ class EligibilityEngine {
 final eligibilityReportProvider =
     FutureProvider.family<EligibilityReport, String>((ref, opportunityId) async {
   final profileAsync = ref.watch(profileProvider);
-  final opp = mockOpportunities.firstWhere((o) => o.id == opportunityId);
+  final repo = ref.watch(opportunityRepositoryProvider);
+  final opp = await repo.getOpportunityById(opportunityId);
+
+  if (opp == null) {
+    throw Exception('Opportunity with ID $opportunityId not found');
+  }
 
   return profileAsync.when(
     data: (profile) => EligibilityEngine.evaluate(opportunity: opp, candidate: profile),
@@ -230,7 +240,7 @@ final eligibilityReportProvider =
       opportunity: opp,
       candidate: const CandidateProfile(id: 'temp', email: 'temp@rexam.in'),
     ),
-    error: (_, __) => EligibilityEngine.evaluate(
+    error: (err, stack) => EligibilityEngine.evaluate(
       opportunity: opp,
       candidate: const CandidateProfile(id: 'temp', email: 'temp@rexam.in'),
     ),

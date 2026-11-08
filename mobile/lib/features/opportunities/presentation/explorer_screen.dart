@@ -3,7 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_dimensions.dart';
-import '../../../core/theme/app_typography.dart';
+import '../../../core/widgets/empty_state.dart';
+import '../domain/opportunity.dart';
 import '../domain/opportunity_filter.dart';
 import 'providers/opportunities_provider.dart';
 import 'widgets/opportunity_card.dart';
@@ -49,18 +50,19 @@ class _ExplorerScreenState extends ConsumerState<ExplorerScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final filter = ref.watch(opportunityFilterProvider);
     final opportunitiesAsync = ref.watch(filteredOpportunitiesProvider);
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
-        title: const Text('Opportunity Explorer'),
+        title: const Text('Explore Examinations'),
         actions: [
           IconButton(
             icon: Stack(
               children: [
-                const Icon(Icons.tune, size: 20),
+                const Icon(Icons.tune_rounded, size: 22),
                 if (filter.hasActiveFilters)
                   Positioned(
                     right: 0,
@@ -69,13 +71,14 @@ class _ExplorerScreenState extends ConsumerState<ExplorerScreen> {
                       width: 8,
                       height: 8,
                       decoration: const BoxDecoration(
-                        color: AppColors.primaryGreen,
+                        color: AppColors.primaryBlue,
                         shape: BoxShape.circle,
                       ),
                     ),
                   ),
               ],
             ),
+            tooltip: 'Filter & Sort',
             onPressed: _openFilterSheet,
           ),
         ],
@@ -83,7 +86,7 @@ class _ExplorerScreenState extends ConsumerState<ExplorerScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            // Search Bar & Filter trigger
+            // Search Input with Clear Button
             Padding(
               padding: const EdgeInsets.symmetric(
                 horizontal: AppDimensions.space16,
@@ -97,11 +100,11 @@ class _ExplorerScreenState extends ConsumerState<ExplorerScreen> {
                       filter.copyWith(searchQuery: val);
                 },
                 decoration: InputDecoration(
-                  hintText: 'Filter by title, organisation, or stream...',
-                  prefixIcon: const Icon(Icons.search, size: 20, color: AppColors.textMuted),
+                  hintText: 'Search title, recruiting body, or branch...',
+                  prefixIcon: const Icon(Icons.search, size: 20),
                   suffixIcon: _searchController.text.isNotEmpty
                       ? IconButton(
-                          icon: const Icon(Icons.clear, size: 16),
+                          icon: const Icon(Icons.clear, size: 18),
                           onPressed: () {
                             _searchController.clear();
                             ref.read(opportunityFilterProvider.notifier).state =
@@ -113,156 +116,115 @@ class _ExplorerScreenState extends ConsumerState<ExplorerScreen> {
               ),
             ),
 
-            // Horizontal Filter Chips Bar
+            // Category Filter Pills (Horizontal Scroll)
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: AppDimensions.space16, vertical: AppDimensions.space4),
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppDimensions.space16,
+                vertical: AppDimensions.space4,
+              ),
               child: Row(
                 children: [
-                  // Filter trigger chip
-                  ActionChip(
-                    avatar: const Icon(Icons.filter_list, size: 14, color: AppColors.primaryGreen),
-                    label: Text(
-                      filter.hasActiveFilters ? 'Filters (Active)' : 'All Filters',
-                      style: AppTypography.caption.copyWith(color: AppColors.textMain),
-                    ),
-                    backgroundColor: filter.hasActiveFilters ? AppColors.secondaryGreen : AppColors.surface,
-                    side: const BorderSide(color: AppColors.border),
-                    shape: RoundedRectangleBorder(borderRadius: AppDimensions.roundedSmall),
-                    onPressed: _openFilterSheet,
-                  ),
-                  const SizedBox(width: AppDimensions.space8),
-
-                  // Quick toggle: Closing Soon
-                  FilterChip(
-                    label: const Text('Closing Soon'),
-                    selected: filter.closingSoonOnly,
-                    selectedColor: AppColors.secondaryGreen,
-                    backgroundColor: AppColors.surface,
-                    labelStyle: AppTypography.caption.copyWith(
-                      color: filter.closingSoonOnly ? AppColors.textMain : AppColors.textMuted,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: AppDimensions.roundedSmall,
-                      side: BorderSide(color: filter.closingSoonOnly ? AppColors.primaryGreen : AppColors.border),
-                    ),
-                    onSelected: (val) {
-                      ref.read(opportunityFilterProvider.notifier).state =
-                          filter.copyWith(closingSoonOnly: val);
-                    },
-                  ),
-                  const SizedBox(width: AppDimensions.space8),
-
-                  // Quick toggle: Central Govt
-                  FilterChip(
-                    label: const Text('Central Govt / PSU'),
-                    selected: filter.isCentralGovernment == true,
-                    selectedColor: AppColors.secondaryGreen,
-                    backgroundColor: AppColors.surface,
-                    labelStyle: AppTypography.caption.copyWith(
-                      color: filter.isCentralGovernment == true ? AppColors.textMain : AppColors.textMuted,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: AppDimensions.roundedSmall,
-                      side: BorderSide(color: filter.isCentralGovernment == true ? AppColors.primaryGreen : AppColors.border),
-                    ),
-                    onSelected: (val) {
-                      ref.read(opportunityFilterProvider.notifier).state = filter.copyWith(
-                        isCentralGovernment: val ? true : null,
-                        clearGovtType: !val,
-                      );
-                    },
-                  ),
-
-                  // Active Category chip if set
-                  if (filter.category != null) ...[
-                    const SizedBox(width: AppDimensions.space8),
-                    Chip(
-                      label: Text(filter.category!.label),
-                      backgroundColor: AppColors.secondaryGreen,
-                      side: const BorderSide(color: AppColors.primaryGreen),
-                      shape: RoundedRectangleBorder(borderRadius: AppDimensions.roundedSmall),
-                      labelStyle: AppTypography.caption.copyWith(color: AppColors.textMain),
-                      onDeleted: () {
+                  ChoiceChip(
+                    label: const Text('All Categories'),
+                    selected: filter.category == null,
+                    onSelected: (selected) {
+                      if (selected) {
                         ref.read(opportunityFilterProvider.notifier).state =
                             filter.copyWith(clearCategory: true);
-                      },
-                    ),
-                  ],
-                ],
-              ),
-            ),
-            const Divider(color: AppColors.border),
-
-            // Results count and active sorting display
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: AppDimensions.space16, vertical: AppDimensions.space8),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  opportunitiesAsync.when(
-                    data: (items) => Text(
-                      '${items.length} verified opportunities found',
-                      style: AppTypography.caption.copyWith(color: AppColors.textMuted),
-                    ),
-                    loading: () => Text('Searching catalog...', style: AppTypography.caption),
-                    error: (_, __) => Text('Search error', style: AppTypography.caption),
+                      }
+                    },
                   ),
-                  Text(
-                    'Sorted by: ${filter.sortOption.label}',
-                    style: AppTypography.caption.copyWith(color: AppColors.textSubtle, fontSize: 11),
-                  ),
-                ],
-              ),
-            ),
-
-            // Main Opportunity List
-            Expanded(
-              child: opportunitiesAsync.when(
-                data: (items) {
-                  if (items.isEmpty) {
-                    return Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(Icons.search_off_outlined, size: 40, color: AppColors.textMuted),
-                          const SizedBox(height: AppDimensions.space12),
-                          Text('No opportunities match your filter', style: AppTypography.sectionHeader),
-                          const SizedBox(height: AppDimensions.space4),
-                          Text('Try broadening your criteria or reset filters.', style: AppTypography.bodyMuted),
-                          const SizedBox(height: AppDimensions.space16),
-                          OutlinedButton(
-                            onPressed: () {
-                              ref.read(opportunityFilterProvider.notifier).state = const OpportunityFilter();
-                              _searchController.clear();
-                            },
-                            child: const Text('Reset All Filters'),
-                          ),
-                        ],
+                  const SizedBox(width: AppDimensions.space8),
+                  ...ExaminationCategory.values.map((cat) {
+                    final isSelected = filter.category == cat;
+                    return Padding(
+                      padding: const EdgeInsets.only(right: AppDimensions.space8),
+                      child: ChoiceChip(
+                        label: Text(cat.label),
+                        selected: isSelected,
+                        onSelected: (selected) {
+                          ref.read(opportunityFilterProvider.notifier).state = filter.copyWith(
+                            category: selected ? cat : null,
+                            clearCategory: !selected,
+                          );
+                        },
                       ),
                     );
-                  }
+                  }),
+                ],
+              ),
+            ),
+            const SizedBox(height: AppDimensions.space8),
 
-                  return ListView.builder(
-                    padding: const EdgeInsets.all(AppDimensions.space16),
-                    itemCount: items.length,
-                    itemBuilder: (context, index) {
-                      final opp = items[index];
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: AppDimensions.space12),
-                        child: OpportunityCard(
-                          opportunity: opp,
-                          onTap: () => context.go('/opportunities/${opp.id}'),
-                        ),
-                      );
-                    },
-                  );
+            // Main Content Area
+            Expanded(
+              child: RefreshIndicator(
+                color: AppColors.primaryBlue,
+                onRefresh: () async {
+                  ref.invalidate(filteredOpportunitiesProvider);
                 },
-                loading: () => const Center(
-                  child: CircularProgressIndicator(color: AppColors.primaryGreen),
-                ),
-                error: (err, _) => Center(
-                  child: Text('Error loading opportunities: $err', style: AppTypography.body),
+                child: opportunitiesAsync.when(
+                  data: (opportunities) {
+                    if (opportunities.isEmpty) {
+                      return ListView(
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        children: [
+                          const SizedBox(height: 60),
+                          EmptyStateView(
+                            icon: Icons.search_off_rounded,
+                            title: 'No Opportunities Found',
+                            description: filter.hasActiveFilters || filter.searchQuery.isNotEmpty
+                                ? 'No examinations match your current search and filter criteria. Try resetting filters.'
+                                : 'No published examination notices available at this time.',
+                            actionLabel: filter.hasActiveFilters || filter.searchQuery.isNotEmpty
+                                ? 'Reset Filters'
+                                : null,
+                            onAction: () {
+                              _searchController.clear();
+                              ref.read(opportunityFilterProvider.notifier).state =
+                                  const OpportunityFilter();
+                            },
+                          ),
+                        ],
+                      );
+                    }
+
+                    return ListView.builder(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppDimensions.space16,
+                        vertical: AppDimensions.space8,
+                      ),
+                      itemCount: opportunities.length,
+                      itemBuilder: (context, index) {
+                        final opp = opportunities[index];
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: AppDimensions.space12),
+                          child: OpportunityCard(
+                            opportunity: opp,
+                            onTap: () => context.go('/opportunities/${opp.id}'),
+                          ),
+                        );
+                      },
+                    );
+                  },
+                  loading: () => const Center(
+                    child: CircularProgressIndicator(color: AppColors.primaryBlue),
+                  ),
+                  error: (error, stack) => ListView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    children: [
+                      const SizedBox(height: 60),
+                      EmptyStateView(
+                        icon: Icons.cloud_off_rounded,
+                        title: 'Unable to Load Opportunities',
+                        description: '$error',
+                        actionLabel: 'Retry',
+                        onAction: () => ref.invalidate(filteredOpportunitiesProvider),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),

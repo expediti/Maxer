@@ -20,7 +20,8 @@ abstract class ExaminationRepository {
 class SupabaseExaminationRepository implements ExaminationRepository {
   final List<Examination> _fallbackData = [
     Examination(
-      id: 'opp-upsc-cse-2026',
+      id: 'c0000000-0000-0000-0000-000000000001',
+      slug: 'upsc-cse-prelims-2026',
       title: 'Civil Services Examination (Preliminary) 2026',
       organisation: 'Union Public Service Commission (UPSC)',
       issuingAuthority: 'Department of Personnel and Training (DoPT), Government of India',
@@ -75,7 +76,8 @@ class SupabaseExaminationRepository implements ExaminationRepository {
       isConfirmed: true,
     ),
     Examination(
-      id: 'opp-isro-scientist-2026',
+      id: 'c0000000-0000-0000-0000-000000000002',
+      slug: 'isro-scientist-engineer-sc-2026',
       title: 'Recruitment of Scientist/Engineer "SC" (Computer Science / Mechanical / Electronics)',
       organisation: 'Indian Space Research Organisation (ISRO)',
       issuingAuthority: 'Department of Space, Vikram Sarabhai Space Centre & URSC',
@@ -133,7 +135,8 @@ class SupabaseExaminationRepository implements ExaminationRepository {
       isConfirmed: true,
     ),
     Examination(
-      id: 'opp-drdo-scientist-b-2026',
+      id: 'c0000000-0000-0000-0000-000000000003',
+      slug: 'drdo-scientist-b-gate-2026',
       title: 'Recruitment of Scientist "B" via Valid GATE Score (RAC Advt 148)',
       organisation: 'Defence Research & Development Organisation (DRDO)',
       issuingAuthority: 'Recruitment and Assessment Centre (RAC), Ministry of Defence',
@@ -258,7 +261,7 @@ class SupabaseExaminationRepository implements ExaminationRepository {
         final res = await client
             .from('examinations')
             .select('*, examination_dates(*), eligibility_rules(*), organisations(*)')
-            .eq('id', id)
+            .or('id.eq.$id,slug.eq.$id')
             .maybeSingle();
         if (res != null) {
           return Examination.fromSupabase(res);
@@ -269,7 +272,9 @@ class SupabaseExaminationRepository implements ExaminationRepository {
     }
 
     try {
-      return _fallbackData.firstWhere((e) => e.id == id);
+      return _fallbackData.firstWhere(
+        (e) => e.id == id || e.slug == id || id.contains(e.slug) || e.id.contains(id),
+      );
     } catch (_) {
       return null;
     }
