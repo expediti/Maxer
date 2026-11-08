@@ -1,0 +1,40 @@
+name: Scheduled Milestone & Deadline Reminders
+
+on:
+  schedule:
+    # 03:00 UTC = 08:30 IST every morning
+    - cron: '0 3 * * *'
+    # 11:30 UTC = 17:00 IST for closing window alerts
+    - cron: '30 11 * * *'
+  workflow_dispatch:
+
+jobs:
+  reminders:
+    name: Evaluate Application Deadlines & Send Alerts
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout Codebase
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+          cache-dependency-path: 'engine/requirements.txt'
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r engine/requirements.txt
+
+      - name: Execute Reminder Scan
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          ENVIRONMENT: 'production'
+        run: |
+          python -m engine.app.jobs.reminder_job
+
