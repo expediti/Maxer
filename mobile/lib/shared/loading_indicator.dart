@@ -16,14 +16,13 @@ class RexamLoadingIndicator extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final indicatorColor = color ?? theme.colorScheme.primary;
+    final indicatorColor = color ?? AppColors.primaryGreen;
 
     final child = SizedBox(
       width: size,
       height: size,
       child: CircularProgressIndicator(
-        strokeWidth: 2.2,
+        strokeWidth: 2.0,
         valueColor: AlwaysStoppedAnimation<Color>(indicatorColor),
       ),
     );
@@ -36,8 +35,9 @@ class RexamLoadingIndicator extends StatelessWidget {
           const SizedBox(height: AppDimensions.space12),
           Text(
             message!,
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: theme.textTheme.bodySmall?.color?.withValues(alpha: 0.7),
+            style: const TextStyle(
+              fontSize: 12,
+              color: AppColors.secondaryText,
             ),
           ),
         ],
@@ -62,21 +62,18 @@ class RexamSkeletonCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final baseColor = isDark ? AppColors.darkSurfaceElevated : const Color(0xFFF1F5F9);
-
     return Container(
       height: height,
       width: width,
       margin: margin,
       decoration: BoxDecoration(
-        color: baseColor,
+        color: AppColors.secondarySurface,
         borderRadius: AppDimensions.roundedDefault,
         border: Border.all(
-          color: isDark ? AppColors.darkBorder : AppColors.lightBorder,
+          color: AppColors.borders,
+          width: AppDimensions.cardBorderWidth,
         ),
       ),
     );
   }
 }
-

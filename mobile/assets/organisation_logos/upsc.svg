@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="120" height="120">
+  <circle cx="60" cy="60" r="56" fill="#0C1B33" stroke="#D4AF37" stroke-width="3"/>
+  <circle cx="60" cy="60" r="48" fill="none" stroke="#D4AF37" stroke-width="1.5" stroke-dasharray="4,2"/>
+  <path d="M60 20 L64 32 L76 32 L66 40 L70 52 L60 44 L50 52 L54 40 L44 32 L56 32 Z" fill="#D4AF37"/>
+  <!-- Ashoka Chakra central motif -->
+  <circle cx="60" cy="68" r="16" fill="none" stroke="#D4AF37" stroke-width="2"/>
+  <circle cx="60" cy="68" r="3" fill="#D4AF37"/>
+  <g stroke="#D4AF37" stroke-width="1">
+    <line x1="60" y1="52" x2="60" y2="84"/>
+    <line x1="44" y1="68" x2="76" y2="68"/>
+    <line x1="49" y1="57" x2="71" y2="79"/>
+    <line x1="49" y1="79" x2="71" y2="57"/>
+  </g>
+  <text x="60" y="100" font-family="Arial, sans-serif" font-size="11" font-weight="bold" fill="#D4AF37" text-anchor="middle" letter-spacing="2">UPSC</text>
+</svg>
+

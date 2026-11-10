@@ -13,6 +13,7 @@ enum ApplicationStatus {
   withdrawn('Withdrawn');
 
   final String label;
+  String get displayName => label;
   const ApplicationStatus(this.label);
 
   static ApplicationStatus fromString(String val) {

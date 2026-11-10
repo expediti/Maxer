@@ -12,104 +12,113 @@ abstract class SavedRepository {
 }
 
 class SupabaseSavedRepository implements SavedRepository {
-  final Set<String> _localSaved = {
-    'opp-upsc-cse-2026',
-    'opp-isro-scientist-2026',
-  };
-
   @override
   Future<List<String>> getSavedExaminationIds(String candidateId) async {
     final client = SupabaseConfig.client;
-    if (client != null) {
-      try {
-        final res = await client
-            .from('saved_examinations')
-            .select('examination_id')
-            .eq('candidate_id', candidateId);
-        final list = (res as List)
-            .map((item) => item['examination_id']?.toString() ?? '')
-            .where((id) => id.isNotEmpty)
-            .toList();
-        return list;
-      } catch (e) {
-        debugPrint('[REXAM] Fetch saved IDs error: $e');
-      }
+    if (client == null || candidateId.trim().isEmpty) {
+      return [];
     }
-    return _localSaved.toList();
+
+    try {
+      final res = await client
+          .from('saved_examinations')
+          .select('examination_id')
+          .eq('candidate_id', candidateId);
+
+      return (res as List)
+          .map((item) => item['examination_id']?.toString() ?? '')
+          .where((id) => id.isNotEmpty)
+          .toList();
+    } catch (e) {
+      debugPrint('[REXAM] Fetch saved IDs error: $e');
+      return [];
+    }
   }
 
   @override
   Future<bool> isSaved(String candidateId, String examinationId) async {
     final client = SupabaseConfig.client;
-    if (client != null) {
-      try {
-        final res = await client
-            .from('saved_examinations')
-            .select('id')
-            .eq('candidate_id', candidateId)
-            .eq('examination_id', examinationId)
-            .maybeSingle();
-        return res != null;
-      } catch (e) {
-        debugPrint('[REXAM] isSaved check error: $e');
-      }
+    if (client == null || candidateId.trim().isEmpty) return false;
+
+    try {
+      final res = await client
+          .from('saved_examinations')
+          .select('id')
+          .eq('candidate_id', candidateId)
+          .eq('examination_id', examinationId)
+          .maybeSingle();
+
+      return res != null;
+    } catch (e) {
+      debugPrint('[REXAM] Check isSaved error: $e');
+      return false;
     }
-    return _localSaved.contains(examinationId);
   }
 
   @override
-  Future<void> saveExamination(
-    String candidateId,
-    String examinationId, {
-    String? notes,
-  }) async {
-    _localSaved.add(examinationId);
+  Future<void> saveExamination(String candidateId, String examinationId, {String? notes}) async {
     final client = SupabaseConfig.client;
-    if (client != null) {
-      try {
-        await client.from('saved_examinations').upsert({
+    if (client == null || candidateId.trim().isEmpty) return;
+
+    try {
+      await client.from('saved_examinations').upsert(
+        {
           'candidate_id': candidateId,
           'examination_id': examinationId,
           'notes': notes,
           'saved_at': DateTime.now().toUtc().toIso8601String(),
-        });
-      } catch (e) {
-        debugPrint('[REXAM] Save examination Supabase error: $e');
-      }
+        },
+        onConflict: 'candidate_id, examination_id',
+      );
+    } catch (e) {
+      debugPrint('[REXAM] Save examination error: $e');
     }
   }
 
   @override
   Future<void> unsaveExamination(String candidateId, String examinationId) async {
-    _localSaved.remove(examinationId);
     final client = SupabaseConfig.client;
-    if (client != null) {
-      try {
-        await client
-            .from('saved_examinations')
-            .delete()
-            .eq('candidate_id', candidateId)
-            .eq('examination_id', examinationId);
-      } catch (e) {
-        debugPrint('[REXAM] Unsave examination Supabase error: $e');
-      }
+    if (client == null || candidateId.trim().isEmpty) return;
+
+    try {
+      await client
+          .from('saved_examinations')
+          .delete()
+          .eq('candidate_id', candidateId)
+          .eq('examination_id', examinationId);
+    } catch (e) {
+      debugPrint('[REXAM] Unsave examination error: $e');
     }
   }
 
   @override
-  Future<List<Examination>> getSavedExaminations(
-    String candidateId,
-    ExaminationRepository examRepo,
-  ) async {
-    final ids = await getSavedExaminationIds(candidateId);
-    final List<Examination> results = [];
-    for (final id in ids) {
-      final exam = await examRepo.getExaminationById(id);
-      if (exam != null) {
-        results.add(exam);
-      }
+  Future<List<Examination>> getSavedExaminations(String candidateId, ExaminationRepository examRepo) async {
+    final client = SupabaseConfig.client;
+    if (client == null || candidateId.trim().isEmpty) {
+      return [];
     }
-    return results;
+
+    try {
+      final res = await client
+          .from('saved_examinations')
+          .select('*, examinations(*, examination_dates(*), eligibility_rules(*), organisations(*))')
+          .eq('candidate_id', candidateId)
+          .order('saved_at', ascending: false);
+
+      final List<Examination> items = [];
+      for (final row in (res as List)) {
+        final examData = row['examinations'];
+        if (examData != null) {
+          items.add(Examination.fromSupabase(examData as Map<String, dynamic>));
+        } else if (row['examination_id'] != null) {
+          final fetched = await examRepo.getExaminationById(row['examination_id'].toString());
+          if (fetched != null) items.add(fetched);
+        }
+      }
+      return items;
+    } catch (e) {
+      debugPrint('[REXAM] Fetch saved examinations error: $e');
+      return [];
+    }
   }
 }
-

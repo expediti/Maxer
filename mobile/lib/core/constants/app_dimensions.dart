@@ -23,12 +23,14 @@ class AppDimensions {
   // Corner Radii (Modern 14-18px)
   static const double radiusSmall = 8.0;
   static const double radiusMedium = 12.0;
+  static const double radiusCard = 14.0;
   static const double radiusDefault = 16.0;
   static const double radiusLarge = 18.0;
   static const double radiusXLarge = 24.0;
 
   static const BorderRadius roundedSmall = BorderRadius.all(Radius.circular(radiusSmall));
   static const BorderRadius roundedMedium = BorderRadius.all(Radius.circular(radiusMedium));
+  static const BorderRadius roundedCard = BorderRadius.all(Radius.circular(radiusCard));
   static const BorderRadius roundedDefault = BorderRadius.all(Radius.circular(radiusDefault));
   static const BorderRadius roundedLarge = BorderRadius.all(Radius.circular(radiusLarge));
   static const BorderRadius roundedXLarge = BorderRadius.all(Radius.circular(radiusXLarge));

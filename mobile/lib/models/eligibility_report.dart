@@ -4,7 +4,7 @@ enum RuleCheckStatus {
   passed('Satisfied'),
   conditionallyPassed('Satisfied with Relaxation'),
   failed('Not Satisfied'),
-  needsConfirmation('Needs Confirmation');
+  needsConfirmation('Requires Verification');
 
   final String label;
   const RuleCheckStatus(this.label);
@@ -18,6 +18,13 @@ class EligibilityCriterionResult {
   final String details;
   final String? ruleEvidence;
 
+  // Granular Academic Conversion Metadata
+  final String? originalScore;
+  final String? convertedPercentage;
+  final String? conversionFormula;
+  final String? conversionSource;
+  final String? comparison;
+
   const EligibilityCriterionResult({
     required this.criterionName,
     required this.status,
@@ -25,6 +32,11 @@ class EligibilityCriterionResult {
     required this.requirement,
     required this.details,
     this.ruleEvidence,
+    this.originalScore,
+    this.convertedPercentage,
+    this.conversionFormula,
+    this.conversionSource,
+    this.comparison,
   });
 }
 
@@ -40,8 +52,10 @@ class EligibilityReport {
   final DateTime evaluatedAt;
 
   const EligibilityReport({
-    required this.examinationId,
-    required this.examinationTitle,
+    String? examinationId,
+    String? opportunityId,
+    String? examinationTitle,
+    String? opportunityTitle,
     required this.organisation,
     required this.overallStatus,
     required this.overallSummary,
@@ -49,6 +63,9 @@ class EligibilityReport {
     required this.applicableRelaxations,
     required this.requiredDocumentsForVerification,
     required this.evaluatedAt,
-  });
-}
+  })  : examinationId = examinationId ?? opportunityId ?? '',
+        examinationTitle = examinationTitle ?? opportunityTitle ?? '';
 
+  String get opportunityId => examinationId;
+  String get opportunityTitle => examinationTitle;
+}

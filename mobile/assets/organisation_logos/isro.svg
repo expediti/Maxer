@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="120" height="120">
+  <rect width="120" height="120" rx="24" fill="#0A1628"/>
+  <!-- ISRO dynamic chevron & rocket trajectory -->
+  <path d="M28 78 L60 26 L92 78 L78 78 L60 48 L42 78 Z" fill="#F47920"/>
+  <!-- Satellite solar panels / blue dynamic sweep -->
+  <path d="M36 68 C 50 54, 70 54, 84 68 L78 74 C 66 62, 54 62, 42 74 Z" fill="#0080FF"/>
+  <circle cx="60" cy="38" r="4" fill="#FFFFFF"/>
+  <text x="60" y="102" font-family="Arial, sans-serif" font-size="12" font-weight="900" fill="#FFFFFF" text-anchor="middle" letter-spacing="3">ISRO</text>
+</svg>
+

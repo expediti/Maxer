@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_dimensions.dart';
-import '../../../../core/theme/app_typography.dart';
 import '../../domain/opportunity.dart';
 
+/// Minimal status indicator: Small semantic dot followed by crisp label.
+/// No heavy colored backgrounds — adheres strictly to minimal black/white design system.
 class StatusBadge extends StatelessWidget {
   final EligibilityStatus status;
   final bool isCompact;
@@ -16,61 +17,58 @@ class StatusBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    Color textColor;
-    Color bgColor;
-    Color borderColor;
+    Color dotColor;
+    String label;
 
     switch (status) {
       case EligibilityStatus.eligible:
-        textColor = AppColors.success;
-        bgColor = AppColors.successLight;
-        borderColor = AppColors.success.withValues(alpha: 0.3);
+        dotColor = AppColors.eligible; // #22C55E
+        label = 'Eligible';
         break;
       case EligibilityStatus.potentiallyEligible:
-        textColor = AppColors.warning;
-        bgColor = AppColors.warningLight;
-        borderColor = AppColors.warning.withValues(alpha: 0.3);
+        dotColor = AppColors.pending; // #EAB308
+        label = 'Likely Eligible';
         break;
       case EligibilityStatus.notEligible:
-        textColor = AppColors.error;
-        bgColor = AppColors.errorLight;
-        borderColor = AppColors.error.withValues(alpha: 0.3);
+        dotColor = AppColors.ineligible; // #EF4444
+        label = 'Not Eligible';
         break;
       case EligibilityStatus.missingInformation:
-        textColor = AppColors.missingInfo;
-        bgColor = Theme.of(context).colorScheme.surface;
-        borderColor = Theme.of(context).colorScheme.outline;
+      case EligibilityStatus.needsVerification:
+        dotColor = AppColors.pending; // #EAB308
+        label = 'Requires Verification';
         break;
     }
 
     return Container(
       padding: EdgeInsets.symmetric(
-        horizontal: isCompact ? AppDimensions.space8 : AppDimensions.space12,
-        vertical: isCompact ? AppDimensions.space2 : AppDimensions.space4,
+        horizontal: isCompact ? 8 : 10,
+        vertical: isCompact ? 3 : 5,
       ),
       decoration: BoxDecoration(
-        color: bgColor,
-        borderRadius: AppDimensions.roundedSmall,
-        border: Border.all(color: borderColor, width: 1),
+        color: AppColors.elevatedSurface,
+        borderRadius: BorderRadius.circular(AppDimensions.radiusSmall),
+        border: Border.all(color: AppColors.border, width: 1.0),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           Container(
-            width: 6,
-            height: 6,
+            width: isCompact ? 5.5 : 6.5,
+            height: isCompact ? 5.5 : 6.5,
             decoration: BoxDecoration(
-              color: textColor,
+              color: dotColor,
               shape: BoxShape.circle,
             ),
           ),
-          const SizedBox(width: AppDimensions.space6),
+          const SizedBox(width: 6),
           Text(
-            status.label,
-            style: AppTypography.caption.copyWith(
-              color: textColor,
+            label,
+            style: TextStyle(
+              color: AppColors.primaryText,
               fontSize: isCompact ? 10.5 : 12,
-              fontWeight: FontWeight.w600,
+              fontWeight: FontWeight.w500,
+              letterSpacing: -0.1,
             ),
           ),
         ],

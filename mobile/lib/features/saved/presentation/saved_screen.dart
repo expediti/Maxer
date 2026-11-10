@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
+
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_dimensions.dart';
 import '../../../core/theme/app_typography.dart';
@@ -21,7 +23,6 @@ class _SavedScreenState extends ConsumerState<SavedScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final savedItems = ref.watch(savedProvider);
 
     final filtered = savedItems.where((opp) {
@@ -46,12 +47,21 @@ class _SavedScreenState extends ConsumerState<SavedScreen> {
     }
 
     return Scaffold(
-      backgroundColor: theme.scaffoldBackgroundColor,
+      backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text('Saved Examinations'),
+        backgroundColor: AppColors.background,
+        elevation: 0,
+        title: Text(
+          'Saved Examinations',
+          style: AppTypography.screenTitle.copyWith(fontSize: 18),
+        ),
         actions: [
           IconButton(
-            icon: Icon(_sortByDeadline ? Icons.schedule_rounded : Icons.calendar_today_rounded, size: 20),
+            icon: Icon(
+              _sortByDeadline ? LucideIcons.clock : LucideIcons.calendar,
+              size: 18,
+              color: AppColors.primaryGreen,
+            ),
             tooltip: _sortByDeadline ? 'Sorted by Closing Deadline' : 'Sorted by Announcement Date',
             onPressed: () {
               setState(() => _sortByDeadline = !_sortByDeadline);
@@ -70,36 +80,43 @@ class _SavedScreenState extends ConsumerState<SavedScreen> {
               ),
               child: TextField(
                 onChanged: (val) => setState(() => _searchQuery = val),
+                style: const TextStyle(color: AppColors.textMain, fontSize: 13),
                 decoration: const InputDecoration(
                   hintText: 'Search within bookmarked opportunities...',
-                  prefixIcon: Icon(Icons.search, size: 20),
+                  prefixIcon: Icon(LucideIcons.search, size: 18, color: AppColors.textMuted),
                 ),
               ),
             ),
 
             // Status Bar
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: AppDimensions.space16, vertical: AppDimensions.space4),
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppDimensions.space16,
+                vertical: AppDimensions.space4,
+              ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
                     '${filtered.length} Saved Opportunities',
-                    style: AppTypography.caption,
+                    style: AppTypography.caption.copyWith(color: AppColors.textMuted),
                   ),
                   Text(
                     _sortByDeadline ? 'Closing Soonest' : 'Recently Announced',
-                    style: AppTypography.caption.copyWith(color: AppColors.primaryBlue, fontWeight: FontWeight.w600),
+                    style: AppTypography.caption.copyWith(
+                      color: AppColors.primaryGreen,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ],
               ),
             ),
-            Divider(color: theme.colorScheme.outline),
+            const Divider(color: AppColors.border, height: 1),
 
-            // Content
+            // Content List
             Expanded(
               child: RefreshIndicator(
-                color: AppColors.primaryBlue,
+                color: AppColors.primaryGreen,
                 onRefresh: () async {
                   await ref.read(savedProvider.notifier).loadSaved();
                 },
@@ -109,11 +126,11 @@ class _SavedScreenState extends ConsumerState<SavedScreen> {
                         children: [
                           const SizedBox(height: 80),
                           EmptyStateView(
-                            icon: Icons.bookmark_border_rounded,
+                            icon: LucideIcons.bookmark,
                             title: 'No Saved Examinations',
                             description: _searchQuery.isNotEmpty
                                 ? 'No saved items match "$_searchQuery".'
-                                : 'Bookmark examinations you want to track to receive notifications and deadline alerts.',
+                                : 'Bookmark examinations you want to track to receive timely notifications and statutory deadline alerts.',
                             actionLabel: 'Explore Opportunities',
                             onAction: () => context.go('/explorer'),
                           ),
@@ -138,17 +155,19 @@ class _SavedScreenState extends ConsumerState<SavedScreen> {
                                 padding: const EdgeInsets.symmetric(horizontal: 20),
                                 decoration: BoxDecoration(
                                   color: AppColors.error,
-                                  borderRadius: AppDimensions.roundedDefault,
+                                  borderRadius: BorderRadius.circular(AppDimensions.radiusCard),
                                 ),
-                                child: const Icon(Icons.delete_outline, color: Colors.white),
+                                child: const Icon(LucideIcons.trash2, color: Colors.white, size: 20),
                               ),
                               onDismissed: (_) {
                                 ref.read(savedProvider.notifier).remove(opp.id);
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(
                                     content: Text('Removed "${opp.title}" from saved.'),
+                                    backgroundColor: AppColors.surface,
                                     action: SnackBarAction(
                                       label: 'Undo',
+                                      textColor: AppColors.primaryGreen,
                                       onPressed: () => ref.read(savedProvider.notifier).toggleSave(opp),
                                     ),
                                   ),
@@ -156,7 +175,7 @@ class _SavedScreenState extends ConsumerState<SavedScreen> {
                               },
                               child: OpportunityCard(
                                 opportunity: opp,
-                                onTap: () => context.go('/opportunities/${opp.id}'),
+                                onTap: () => context.push('/opportunities/${opp.id}'),
                               ),
                             ),
                           );

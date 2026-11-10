@@ -4,7 +4,9 @@ import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_dimensions.dart';
 import '../../../core/theme/app_typography.dart';
+import '../../../core/widgets/google_logo.dart';
 import '../../../shared/rexam_wordmark.dart';
+import '../domain/auth_state.dart';
 import 'providers/auth_provider.dart';
 
 class WelcomeScreen extends ConsumerStatefulWidget {
@@ -14,18 +16,54 @@ class WelcomeScreen extends ConsumerStatefulWidget {
   ConsumerState<WelcomeScreen> createState() => _WelcomeScreenState();
 }
 
-class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
+class _WelcomeScreenState extends ConsumerState<WelcomeScreen> with WidgetsBindingObserver {
   bool _isGoogleLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState lifecycleState) {
+    if (lifecycleState == AppLifecycleState.resumed) {
+      if (_isGoogleLoading) {
+        Future.delayed(const Duration(milliseconds: 1200), () {
+          if (mounted && !ref.read(authProvider).isAuthenticated) {
+            setState(() => _isGoogleLoading = false);
+          }
+        });
+      }
+    }
+  }
 
   void _showLegalDialog(String title, String content) {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text(title, style: AppTypography.screenTitle),
+        backgroundColor: AppColors.elevatedSurface,
+        shape: RoundedRectangleBorder(
+          borderRadius: AppDimensions.roundedDefault,
+          side: const BorderSide(color: AppColors.border),
+        ),
+        title: Text(
+          title,
+          style: AppTypography.screenTitle.copyWith(color: AppColors.primaryText),
+        ),
         content: SingleChildScrollView(
           child: Text(
             content,
-            style: AppTypography.bodyMuted.copyWith(height: 1.5),
+            style: AppTypography.bodyMuted.copyWith(
+              color: AppColors.secondaryText,
+              height: 1.5,
+            ),
           ),
         ),
         actions: [
@@ -40,14 +78,12 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
 
   Future<void> _handleGoogleSignIn() async {
     setState(() => _isGoogleLoading = true);
-    final success = await ref.read(authProvider.notifier).signInWithGoogle();
+    final launched = await ref.read(authProvider.notifier).signInWithGoogle();
     if (!mounted) return;
-    setState(() => _isGoogleLoading = false);
 
-    if (success) {
-      context.go('/discover');
-    } else {
-      final error = ref.read(authProvider).errorMessage ?? 'Google sign-in could not be completed.';
+    if (!launched) {
+      setState(() => _isGoogleLoading = false);
+      final error = ref.read(authProvider).errorMessage ?? 'Google authentication could not be started.';
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(error),
@@ -59,11 +95,27 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
+    ref.listen<AuthState>(authProvider, (previous, next) {
+      if (next.isAuthenticated) {
+        setState(() => _isGoogleLoading = false);
+        if (next.hasCompletedOnboarding) {
+          context.go('/discover');
+        } else {
+          context.go('/profile/wizard');
+        }
+      } else if (next.status == AuthStatus.error && next.errorMessage != null) {
+        setState(() => _isGoogleLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(next.errorMessage!),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    });
 
     return Scaffold(
-      backgroundColor: isDark ? AppColors.darkBackground : AppColors.lightBackground,
+      backgroundColor: AppColors.mainBackground,
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(
@@ -73,114 +125,108 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Spacer(flex: 1),
+              const SizedBox(height: AppDimensions.space16),
 
-              // Rexam Brand Wordmark & Emblem
+              // Rexam Logo and Brand Wordmark
               const Center(
-                child: RexamWordmark(fontSize: 28.0),
-              ),
-
-              const Spacer(flex: 2),
-
-              // Hero Heading
-              Text(
-                'Your next opportunity starts here.',
-                textAlign: TextAlign.center,
-                style: AppTypography.screenTitle.copyWith(
-                  fontSize: 26,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: -0.5,
-                  height: 1.25,
-                ),
-              ),
-              const SizedBox(height: AppDimensions.space12),
-
-              // Supporting Text
-              Text(
-                'Discover verified examinations, evaluate your eligibility deterministically, and never miss critical application deadlines across India.',
-                textAlign: TextAlign.center,
-                style: AppTypography.bodyMuted.copyWith(
-                  fontSize: 14,
-                  height: 1.5,
-                ),
+                child: RexamWordmark(fontSize: 26.0),
               ),
 
               const Spacer(flex: 3),
 
-              // Continue with Google Button
+              // Hero Heading
+              Text(
+                'Your next opportunity\nstarts here.',
+                textAlign: TextAlign.center,
+                style: AppTypography.headlineLarge.copyWith(
+                  fontSize: 32.0,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -0.8,
+                  height: 1.2,
+                  color: AppColors.primaryText,
+                ),
+              ),
+
+              const SizedBox(height: AppDimensions.space16),
+
+              // Supporting Explanatory Text
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: AppDimensions.space12),
+                child: Text(
+                  'Discover exams, check statutory eligibility, track applications and never miss important deadlines.',
+                  textAlign: TextAlign.center,
+                  style: AppTypography.bodyMuted.copyWith(
+                    fontSize: 14.5,
+                    height: 1.5,
+                    color: AppColors.secondaryText,
+                  ),
+                ),
+              ),
+
+              const Spacer(flex: 4),
+
+              // Continue with Google Button (Official 4-color Google G, dark elevated surface)
               OutlinedButton(
                 onPressed: _isGoogleLoading ? null : _handleGoogleSignIn,
                 style: OutlinedButton.styleFrom(
-                  minimumSize: const Size.fromHeight(AppDimensions.buttonHeight),
-                  backgroundColor: isDark ? AppColors.darkSurface : Colors.white,
-                  side: BorderSide(
-                    color: isDark ? AppColors.darkBorder : AppColors.lightBorder,
+                  minimumSize: const Size.fromHeight(52),
+                  backgroundColor: AppColors.cardBackground,
+                  side: const BorderSide(color: AppColors.border, width: 1.0),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
                   ),
                 ),
                 child: _isGoogleLoading
                     ? const SizedBox(
                         width: 20,
                         height: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2),
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(AppColors.white),
+                        ),
                       )
                     : Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          // Google G Icon / Emblem
-                          Container(
-                            width: 20,
-                            height: 20,
-                            decoration: const BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: Colors.redAccent,
-                            ),
-                            child: const Center(
-                              child: Text(
-                                'G',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                          ),
+                          const GoogleLogo(size: 20),
                           const SizedBox(width: AppDimensions.space12),
                           Text(
                             'Continue with Google',
                             style: AppTypography.button.copyWith(
-                              color: isDark ? AppColors.darkTextMain : AppColors.lightTextMain,
+                              color: AppColors.primaryText,
+                              fontSize: 14.5,
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
                         ],
                       ),
               ),
+
               const SizedBox(height: AppDimensions.space12),
 
-              // Continue with Email Button
+              // Continue with Email Button (Crisp White filled action with black text)
               ElevatedButton(
-                onPressed: () => context.go('/auth'),
-                child: const Text('Continue with Email'),
-              ),
-              const SizedBox(height: AppDimensions.space12),
-
-              // Explore as Guest
-              TextButton(
-                onPressed: () async {
-                  await ref.read(authProvider.notifier).signInAsGuest();
-                  if (!context.mounted) return;
-                  context.go('/discover');
-                },
+                onPressed: () => context.push('/auth'),
+                style: ElevatedButton.styleFrom(
+                  minimumSize: const Size.fromHeight(52),
+                  backgroundColor: AppColors.white,
+                  foregroundColor: AppColors.black,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
+                  ),
+                  elevation: 0,
+                ),
                 child: Text(
-                  'Explore as Guest',
+                  'Continue with Email',
                   style: AppTypography.button.copyWith(
-                    color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
-                    fontSize: 13,
+                    color: AppColors.black,
+                    fontSize: 14.5,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
               ),
 
-              const SizedBox(height: AppDimensions.space16),
+              const SizedBox(height: AppDimensions.space24),
 
               // Terms and Privacy Policy Links
               Row(
@@ -189,40 +235,39 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
                   GestureDetector(
                     onTap: () => _showLegalDialog(
                       'Terms of Service',
-                      'REXAM provides examination alerts and deterministic eligibility analysis based on publicly published official recruitment gazettes and notices.\n\nCandidates must independently verify their eligibility on the recruiting authority\'s official application portal.',
+                      'Rexam is a public interest platform aggregating official notifications from recruitment boards across India. All data is deterministically parsed from gazette publications and primary government portals.',
                     ),
                     child: Text(
                       'Terms of Service',
                       style: AppTypography.caption.copyWith(
-                        color: AppColors.primaryBlue,
+                        color: AppColors.secondaryText,
                         decoration: TextDecoration.underline,
-                        fontSize: 11,
+                        fontSize: 12,
                       ),
                     ),
                   ),
-                  Text(
-                    '  •  ',
-                    style: AppTypography.caption.copyWith(
-                      color: isDark ? AppColors.darkTextSubtle : AppColors.lightTextSubtle,
-                    ),
+                  const Text(
+                    '   •   ',
+                    style: TextStyle(color: AppColors.mutedText),
                   ),
                   GestureDetector(
                     onTap: () => _showLegalDialog(
                       'Privacy Policy',
-                      'Your personal demographics and educational qualifications are used exclusively for computing deterministic examination eligibility and storing application milestones.\n\nAll candidate records are protected by Row Level Security in Supabase.',
+                      'Your educational background and category data are stored encrypted in private candidate profiles for local eligibility evaluation. We never sell or share candidate data with third-party coaching institutes.',
                     ),
                     child: Text(
                       'Privacy Policy',
                       style: AppTypography.caption.copyWith(
-                        color: AppColors.primaryBlue,
+                        color: AppColors.secondaryText,
                         decoration: TextDecoration.underline,
-                        fontSize: 11,
+                        fontSize: 12,
                       ),
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: AppDimensions.space8),
+
+              const SizedBox(height: AppDimensions.space12),
             ],
           ),
         ),

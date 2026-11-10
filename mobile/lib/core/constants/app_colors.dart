@@ -1,83 +1,85 @@
 import 'package:flutter/material.dart';
 
-/// REXAM Brand Design System Color Palette
-/// Designed for high readability, academic & career professionalism,
-/// and support for both Light and Dark themes.
+/// REXAM Brand Design System — Minimal Black & White Identity
+/// Strict palette: Pure pitch black, subtle charcoal surfaces, crisp white typography,
+/// and extremely restrained semantic status dots (Green = Eligible, Red = Ineligible, Yellow = Pending).
 class AppColors {
   AppColors._();
 
-  // --- Light Theme Palette (Warm Neutral / Off-White) ---
-  static const Color lightBackground = Color(0xFFF8F9FA);
-  static const Color lightSecondaryBackground = Color(0xFFF1F5F9);
-  static const Color lightSurface = Color(0xFFFFFFFF);
-  static const Color lightSurfaceElevated = Color(0xFFFFFFFF);
+  // --- Official Design System Starting Tokens ---
+  static const Color mainBackground = Color(0xFF000000);
+  static const Color secondaryBackground = Color(0xFF080808);
+  static const Color cardBackground = Color(0xFF0D0D0D);
+  static const Color elevatedSurface = Color(0xFF141414);
 
-  static const Color lightTextMain = Color(0xFF111827); // Deep charcoal
-  static const Color lightTextMuted = Color(0xFF6B7280); // Muted grey
-  static const Color lightTextSubtle = Color(0xFF9CA3AF);
+  // Typography Tokens
+  static const Color primaryText = Color(0xFFFFFFFF);
+  static const Color secondaryText = Color(0xFFB5B5B5);
+  static const Color mutedText = Color(0xFF777777);
 
-  static const Color lightBorder = Color(0xFFE5E7EB); // Subtle border
-  static const Color lightBorderSubtle = Color(0xFFF3F4F6);
-  static const Color lightDivider = Color(0xFFE5E7EB);
+  // Structural & Interactive Borders
+  static const Color border = Color(0xFF242424);
+  static const Color borders = Color(0xFF242424);
+  static const Color bordersLight = Color(0xFF1A1A1A);
+  static const Color divider = Color(0xFF1F1F1F);
 
-  // --- Dark Theme Palette (Deep Slate / Charcoal) ---
-  static const Color darkBackground = Color(0xFF0B0F19);
-  static const Color darkSecondaryBackground = Color(0xFF111827);
-  static const Color darkSurface = Color(0xFF162032);
-  static const Color darkSurfaceElevated = Color(0xFF1E293B);
+  // Semantic Status Colors (Restrained to dots and micro-badges)
+  static const Color eligible = Color(0xFF22C55E);
+  static const Color ineligible = Color(0xFFEF4444);
+  static const Color pending = Color(0xFFEAB308);
 
-  static const Color darkTextMain = Color(0xFFF9FAFB);
-  static const Color darkTextMuted = Color(0xFF94A3B8);
-  static const Color darkTextSubtle = Color(0xFF64748B);
+  static const Color primaryGreen = Color(0xFF22C55E);
+  static const Color secondaryGreen = Color(0xFF16A34A);
+  static const Color mutedGreen = Color(0xFF166534);
+  static const Color greenTint = Color(0x1A22C55E); // ~10% for subtle status chips
 
-  static const Color darkBorder = Color(0xFF26334D);
-  static const Color darkBorderSubtle = Color(0xFF1E293B);
-  static const Color darkDivider = Color(0xFF1F2937);
+  static const Color error = Color(0xFFEF4444);
+  static const Color errorBg = Color(0x1AEF4444);
+  static const Color warning = Color(0xFFEAB308);
+  static const Color warningBg = Color(0x1AEAB308);
+  static const Color info = Color(0xFF38BDF8);
+  static const Color infoBg = Color(0x1A38BDF8);
+  static const Color success = Color(0xFF22C55E);
+  static const Color successBg = Color(0x1A22C55E);
 
-  // --- Brand Accents & Semantic Tokens ---
-  // Primary: Sophisticated Indigo / Blue
-  static const Color primaryBlue = Color(0xFF2563EB);
-  static const Color primaryBlueDark = Color(0xFF1D4ED8);
-  static const Color primaryBlueLight = Color(0xFFEFF6FF);
+  // Neutral Accents
+  static const Color white = Color(0xFFFFFFFF);
+  static const Color black = Color(0xFF000000);
 
-  // Success: Green
-  static const Color success = Color(0xFF059669);
-  static const Color successLight = Color(0xFFECFDF5);
-  static const Color successDark = Color(0xFF10B981);
+  // Semantic Aliases
+  static const Color mainText = primaryText;
+  static const Color secondarySurface = cardBackground;
+  static const Color background = mainBackground;
+  static const Color surface = cardBackground;
+  static const Color surfaceElevated = elevatedSurface;
+  static const Color borderSubtle = bordersLight;
+  static const Color textMain = primaryText;
+  static const Color textMuted = secondaryText;
+  static const Color textSubtle = mutedText;
 
-  // Warning: Amber
-  static const Color warning = Color(0xFFD97706);
-  static const Color warningLight = Color(0xFFFFFBEB);
-  static const Color warningDark = Color(0xFFF59E0B);
+  static const Color darkBackground = mainBackground;
+  static const Color darkSecondaryBackground = secondaryBackground;
+  static const Color darkSurface = cardBackground;
+  static const Color darkSurfaceElevated = elevatedSurface;
+  static const Color darkTextMain = primaryText;
+  static const Color darkTextMuted = secondaryText;
+  static const Color darkTextSubtle = mutedText;
+  static const Color darkBorder = border;
+  static const Color darkBorderSubtle = bordersLight;
+  static const Color darkDivider = divider;
 
-  // Error: Red
-  static const Color error = Color(0xFFDC2626);
-  static const Color errorLight = Color(0xFFFEF2F2);
-  static const Color errorDark = Color(0xFFEF4444);
+  static const Color lightBackground = mainBackground;
+  static const Color lightSecondaryBackground = secondaryBackground;
+  static const Color lightSurface = cardBackground;
+  static const Color lightSurfaceElevated = elevatedSurface;
+  static const Color lightTextMain = primaryText;
+  static const Color lightTextMuted = secondaryText;
+  static const Color lightTextSubtle = mutedText;
+  static const Color lightBorder = border;
+  static const Color lightBorderSubtle = bordersLight;
+  static const Color lightDivider = divider;
 
-  // Info: Cyan / Sky Blue
-  static const Color info = Color(0xFF0284C7);
-  static const Color infoLight = Color(0xFFF0F9FF);
-
-  // Eligibility Status Colors
-  static const Color eligible = Color(0xFF059669);
-  static const Color potentiallyEligible = Color(0xFFD97706);
-  static const Color ineligible = Color(0xFFDC2626);
-  static const Color missingInfo = Color(0xFF6B7280);
-
-  // Legacy & Theme-dependent compatibility accessors (defaulting to dark/light appropriately)
-  static const Color background = darkBackground;
-  static const Color secondaryBackground = darkSecondaryBackground;
-  static const Color surface = darkSurface;
-  static const Color surfaceElevated = darkSurfaceElevated;
-  static const Color textMain = darkTextMain;
-  static const Color textMuted = darkTextMuted;
-  static const Color textSubtle = darkTextSubtle;
-  static const Color border = darkBorder;
-  static const Color borderSubtle = darkBorderSubtle;
-  static const Color divider = darkDivider;
-
-  static const Color primaryGreen = Color(0xFF10B981);
-  static const Color secondaryGreen = Color(0xFF059669);
-  static const Color greenLight = Color(0x1F10B981);
+  static const Color primaryBlue = primaryGreen;
+  static const Color primaryBlueDark = secondaryGreen;
+  static const Color primaryBlueLight = greenTint;
 }

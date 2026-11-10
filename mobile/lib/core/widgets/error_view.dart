@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../constants/app_colors.dart';
 import '../constants/app_dimensions.dart';
 
@@ -16,8 +17,6 @@ class ErrorView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(AppDimensions.space24),
@@ -27,12 +26,13 @@ class ErrorView extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(AppDimensions.space16),
               decoration: BoxDecoration(
-                color: AppColors.error.withValues(alpha: 0.1),
+                color: AppColors.error.withValues(alpha: 0.12),
                 shape: BoxShape.circle,
+                border: Border.all(color: AppColors.error.withValues(alpha: 0.3)),
               ),
               child: const Icon(
-                Icons.error_outline_rounded,
-                size: 36,
+                LucideIcons.alertTriangle,
+                size: 32,
                 color: AppColors.error,
               ),
             ),
@@ -40,26 +40,32 @@ class ErrorView extends StatelessWidget {
             Text(
               title,
               textAlign: TextAlign.center,
-              style: theme.textTheme.titleMedium?.copyWith(
+              style: const TextStyle(
+                fontSize: 16,
                 fontWeight: FontWeight.w600,
+                color: AppColors.textMain,
               ),
             ),
             const SizedBox(height: AppDimensions.space8),
             Text(
               message,
               textAlign: TextAlign.center,
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+              style: const TextStyle(
+                fontSize: 13,
+                color: AppColors.textMuted,
+                height: 1.4,
               ),
             ),
             if (onRetry != null) ...[
               const SizedBox(height: AppDimensions.space20),
               OutlinedButton.icon(
                 onPressed: onRetry,
-                icon: const Icon(Icons.refresh, size: 18),
+                icon: const Icon(LucideIcons.refreshCw, size: 16),
                 label: const Text('Try Again'),
                 style: OutlinedButton.styleFrom(
-                  minimumSize: const Size(140, 44),
+                  minimumSize: const Size(140, 42),
+                  side: const BorderSide(color: AppColors.border),
+                  foregroundColor: AppColors.textMain,
                 ),
               ),
             ],
@@ -69,4 +75,3 @@ class ErrorView extends StatelessWidget {
     );
   }
 }
-

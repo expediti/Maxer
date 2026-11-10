@@ -42,6 +42,8 @@ dependencies:
   google_fonts: ^6.2.1
   uuid: ^4.4.0
   url_launcher: ^6.3.0
+  lucide_icons_flutter: ^4.0.2
+  flutter_svg: ^2.3.2
 
 dev_dependencies:
   flutter_test:
@@ -64,6 +66,10 @@ flutter:
   # included with your application, so that you can use the icons in
   # the material Icons class.
   uses-material-design: true
+
+  assets:
+    - assets/branding/
+    - assets/organisation_logos/
 
   # To add assets to your application, add an assets section, like this:
   # assets:

@@ -18,183 +18,6 @@ abstract class ExaminationRepository {
 }
 
 class SupabaseExaminationRepository implements ExaminationRepository {
-  final List<Examination> _fallbackData = [
-    Examination(
-      id: 'c0000000-0000-0000-0000-000000000001',
-      slug: 'upsc-cse-prelims-2026',
-      title: 'Civil Services Examination (Preliminary) 2026',
-      organisation: 'Union Public Service Commission (UPSC)',
-      issuingAuthority: 'Department of Personnel and Training (DoPT), Government of India',
-      category: ExaminationCategory.govtRecruitment,
-      overview:
-          'The Civil Services Examination is conducted annually by UPSC to recruit officers into premier Indian administrative services, including IAS, IFS, IPS, and Central Group A & B services.',
-      vacancies: 1056,
-      eligibilityCriteriaSummary:
-          'Must hold a degree of any recognized university. Age 21 to 32 years as on 1st August 2026, with statutory relaxation for reserved categories.',
-      minAge: 21,
-      maxAge: 32,
-      categoryAgeRelaxation: {
-        'General / EWS': 'No relaxation (32 years maximum, 6 attempts)',
-        'OBC-NCL': '3 years relaxation (up to 35 years, 9 attempts)',
-        'SC / ST': '5 years relaxation (up to 37 years, unlimited attempts)',
-        'PwBD': '10 years relaxation (up to 42 years)',
-      },
-      educationalQualifications: [
-        'Bachelor’s Degree in any discipline from a recognized University.',
-        'Candidates appearing in final year degree examination are eligible to apply provisionally.',
-      ],
-      eligibleStreams: ['All Disciplines (Engineering, Sciences, Arts, Commerce, Medicine, Law)'],
-      minPercentage: null,
-      nationality: 'Citizen of India',
-      genderRequirements: 'All genders eligible.',
-      workExperience: 'No prior work experience required.',
-      applicationFee: 100,
-      feeExemptions: 'Female candidates, SC, ST, and Persons with Benchmark Disability (PwBD) are fully exempted.',
-      requiredDocuments: [
-        'Government Photo ID Proof',
-        'Class 10th Certificate (Date of Birth proof)',
-        'Graduation Degree / Final Year Bonafide Certificate',
-      ],
-      importantDates: {
-        'Notification Date': DateTime(2026, 2, 14),
-        'Application Deadline': DateTime(2026, 3, 6, 18, 0),
-        'Preliminary Examination': DateTime(2026, 5, 25),
-      },
-      selectionProcedure: 'Three-tier structure: 1. Preliminary Examination; 2. Main Examination; 3. Personality Test.',
-      examPattern: 'Prelims Paper 1: General Studies (200 marks). Paper 2: CSAT (qualifying at 33%).',
-      salaryOrPayScale: 'Level 10 of 7th CPC (₹56,100 to ₹1,77,500 base pay).',
-      location: 'All India Service (Cadre allocated upon appointment).',
-      applicationInstructions: 'Apply online exclusively through UPSC OTR portal at upsconline.nic.in.',
-      officialNotificationPdfUrl: 'https://upsc.gov.in/sites/default/files/ExamNotice_CSE_2026.pdf',
-      officialApplicationUrl: 'https://upsconline.nic.in',
-      sourceUrl: 'https://upsc.gov.in',
-      lastVerifiedAt: DateTime(2026, 3, 1, 10, 30),
-      isOfficialSource: true,
-      applicationDeadline: DateTime(2026, 3, 6, 18, 0),
-      isCentralGovernment: true,
-      state: null,
-      isConfirmed: true,
-    ),
-    Examination(
-      id: 'c0000000-0000-0000-0000-000000000002',
-      slug: 'isro-scientist-engineer-sc-2026',
-      title: 'Recruitment of Scientist/Engineer "SC" (Computer Science / Mechanical / Electronics)',
-      organisation: 'Indian Space Research Organisation (ISRO)',
-      issuingAuthority: 'Department of Space, Vikram Sarabhai Space Centre & URSC',
-      category: ExaminationCategory.psu,
-      overview:
-          'ISRO Centralised Recruitment Board (ICRB) invites online applications for Scientist/Engineer "SC" positions in Group A Gazetted posts across ISRO centres.',
-      vacancies: 320,
-      eligibilityCriteriaSummary:
-          'First Class B.E. / B.Tech or equivalent in CS, Electronics, or Mechanical with minimum 65% aggregate or 6.84 CGPA. Maximum age 28 years.',
-      minAge: 18,
-      maxAge: 28,
-      categoryAgeRelaxation: {
-        'General': '28 years',
-        'OBC-NCL': '31 years (3 years relaxation)',
-        'SC / ST': '33 years (5 years relaxation)',
-        'PwBD': '38 years (10 years relaxation)',
-      },
-      educationalQualifications: [
-        'B.E. / B.Tech in CS / IT / Mechanical / ECE with minimum 65% aggregate or 6.84/10 CGPA.',
-      ],
-      eligibleStreams: [
-        'Computer Science & Engineering',
-        'Information Technology',
-        'Mechanical Engineering',
-        'Electronics and Communication Engineering',
-      ],
-      minPercentage: 65.0,
-      nationality: 'Citizen of India',
-      genderRequirements: 'All genders eligible.',
-      workExperience: 'Fresh engineering graduates and final semester students eligible.',
-      applicationFee: 250,
-      feeExemptions: 'All women, SC/ST/PwBD and Ex-Servicemen are exempted.',
-      requiredDocuments: [
-        'Class 10th and 12th Marksheets & Certificates',
-        'B.Tech Consolidated Marksheet',
-      ],
-      importantDates: {
-        'Notification Date': DateTime(2026, 2, 20),
-        'Application Deadline': DateTime(2026, 3, 15, 23, 59),
-        'Written Examination': DateTime(2026, 5, 10),
-      },
-      selectionProcedure: 'Written CBT test (Discipline + Aptitude) followed by technical interview in 1:5 ratio.',
-      examPattern: 'Part A: 80 Discipline-specific MCQs. Part B: 15 Multiple choice aptitude questions.',
-      salaryOrPayScale: 'Pay Level 10 (Gross ~₹92,000/month plus medical and campus housing).',
-      location: 'Bengaluru, Thiruvananthapuram, Sriharikota, Hyderabad, Ahmedabad.',
-      applicationInstructions: 'Register online via the ICRB portal. Upload CGPA-to-percentage formula certificate.',
-      officialNotificationPdfUrl: 'https://www.isro.gov.in/media_isro/pdf/recruitment/ICRB_01_2026.pdf',
-      officialApplicationUrl: 'https://apps.isac.gov.in/icrb-2026',
-      sourceUrl: 'https://isro.gov.in',
-      lastVerifiedAt: DateTime(2026, 3, 2, 14, 0),
-      isOfficialSource: true,
-      applicationDeadline: DateTime(2026, 3, 15, 23, 59),
-      isCentralGovernment: true,
-      state: null,
-      isConfirmed: true,
-    ),
-    Examination(
-      id: 'c0000000-0000-0000-0000-000000000003',
-      slug: 'drdo-scientist-b-gate-2026',
-      title: 'Recruitment of Scientist "B" via Valid GATE Score (RAC Advt 148)',
-      organisation: 'Defence Research & Development Organisation (DRDO)',
-      issuingAuthority: 'Recruitment and Assessment Centre (RAC), Ministry of Defence',
-      category: ExaminationCategory.govtRecruitment,
-      overview:
-          'DRDO RAC invites online applications from talented engineering graduates for appointment to the post of Scientist "B" across DRDO laboratories.',
-      vacancies: 204,
-      eligibilityCriteriaSummary:
-          'First Class Bachelor’s Degree in Engineering or Technology in relevant discipline and a valid GATE Score in corresponding paper.',
-      minAge: 21,
-      maxAge: 28,
-      categoryAgeRelaxation: {
-        'Unreserved / EWS': '28 years',
-        'OBC-NCL': '31 years (3 years)',
-        'SC / ST': '33 years (5 years)',
-        'PwBD': '38 years (10 years)',
-      },
-      educationalQualifications: [
-        'First Class Bachelor’s Degree in Engineering/Technology in CS, Mech, ECE, or EE.',
-        'Valid GATE score in corresponding subject paper.',
-      ],
-      eligibleStreams: [
-        'Computer Science & Engineering',
-        'Mechanical Engineering',
-        'Electrical Engineering',
-        'Electronics & Communication Engineering',
-      ],
-      minPercentage: 60.0,
-      nationality: 'Citizen of India',
-      genderRequirements: 'All genders eligible.',
-      workExperience: 'None required.',
-      applicationFee: 100,
-      feeExemptions: 'No fee for SC/ST/PwBD and Women candidates.',
-      requiredDocuments: [
-        'Official GATE Scorecard',
-        'Engineering Degree / Final Year Consolidated Marksheet',
-        'Class 10 Certificate (DoB proof)',
-      ],
-      importantDates: {
-        'Application Deadline': DateTime(2026, 3, 29, 17, 0),
-        'Personal Interview Shortlist': DateTime(2026, 4, 30),
-      },
-      selectionProcedure: 'Shortlisting based on GATE Score in 1:10 ratio, followed by Technical Interview in Delhi.',
-      salaryOrPayScale: 'Level 10 (7th CPC), Basic ₹56,100/- pm (Gross ~₹95,000/month).',
-      location: 'Bengaluru, Hyderabad, Pune, Chandigarh, Delhi, Kochi.',
-      applicationInstructions: 'Apply online at rac.gov.in. Upload scanned certificates.',
-      officialNotificationPdfUrl: 'https://rac.gov.in/download/advt_148_scientist_b.pdf',
-      officialApplicationUrl: 'https://rac.gov.in',
-      sourceUrl: 'https://rac.gov.in',
-      lastVerifiedAt: DateTime(2026, 3, 4, 11, 45),
-      isOfficialSource: true,
-      applicationDeadline: DateTime(2026, 3, 29, 17, 0),
-      isCentralGovernment: true,
-      state: null,
-      isConfirmed: true,
-    ),
-  ];
-
   @override
   Future<List<Examination>> getExaminations({
     ExaminationCategory? category,
@@ -204,107 +27,177 @@ class SupabaseExaminationRepository implements ExaminationRepository {
     int limit = 20,
   }) async {
     final client = SupabaseConfig.client;
-    if (client != null) {
-      try {
-        var query = client
-            .from('examinations')
-            .select('*, examination_dates(*), eligibility_rules(*), organisations(*)')
-            .eq('status', 'published');
+    if (client == null) {
+      debugPrint('[REXAM] Supabase client unavailable. Returning empty examination list.');
+      return [];
+    }
 
-        if (category != null) {
-          query = query.eq('category', category.label);
-        }
-        if (isCentralGovernment != null) {
-          query = query.eq('is_central_government', isCentralGovernment);
-        }
-        if (searchQuery != null && searchQuery.trim().isNotEmpty) {
-          query = query.ilike('name', '%${searchQuery.trim()}%');
-        }
+    try {
+      var query = client
+          .from('examinations')
+          .select('*, examination_dates(*), eligibility_rules(*), organisations(*)')
+          .eq('status', 'published');
 
-        final int from = (page - 1) * limit;
-        final int to = from + limit - 1;
-        final response = await query.range(from, to);
-
-        if (response.isNotEmpty) {
-          return response.map<Examination>((item) => Examination.fromSupabase(item)).toList();
+      if (category != null) {
+        switch (category) {
+          case ExaminationCategory.scholarship:
+            query = query.inFilter('category', [
+              'Scholarships & Fellowships', 'Scholarships & Funding', 'scholarship', 'Scholarships', 'Scholarship'
+            ]);
+            break;
+          case ExaminationCategory.govtRecruitment:
+            query = query.inFilter('category', [
+              'Government Recruitment', 'Government Examinations', 'govt_recruitment'
+            ]);
+            break;
+          case ExaminationCategory.psu:
+            query = query.inFilter('category', ['PSU Recruitment', 'psu']);
+            break;
+          case ExaminationCategory.stateGovt:
+            query = query.inFilter('category', ['State Government Jobs', 'state_govt', 'State Government']);
+            break;
+          case ExaminationCategory.railway:
+            query = query.inFilter('category', ['Railways', 'Railway']);
+            break;
+          case ExaminationCategory.banking:
+            query = query.inFilter('category', ['Banking & Finance', 'Banking']);
+            break;
+          case ExaminationCategory.defence:
+            query = query.inFilter('category', ['Defence & Police', 'defence']);
+            break;
+          case ExaminationCategory.research:
+          case ExaminationCategory.internshipResearch:
+            query = query.inFilter('category', ['Research & Science', 'Research & Internships', 'scientific']);
+            break;
+          case ExaminationCategory.teaching:
+            query = query.inFilter('category', ['Teaching & Academia', 'teaching']);
+            break;
+          case ExaminationCategory.healthcare:
+            query = query.inFilter('category', ['Healthcare & Medical', 'healthcare']);
+            break;
+          case ExaminationCategory.lawJudicial:
+            query = query.inFilter('category', ['Law & Courts', 'judicial']);
+            break;
+          case ExaminationCategory.aviationTransport:
+            query = query.inFilter('category', ['Aviation & Transport', 'aviation_maritime']);
+            break;
+          case ExaminationCategory.agricultureEnv:
+            query = query.inFilter('category', ['Agriculture & Environment', 'agriculture']);
+            break;
+          case ExaminationCategory.apprenticeship:
+            query = query.inFilter('category', ['Apprenticeships', 'apprenticeship']);
+            break;
+          case ExaminationCategory.internship:
+            query = query.inFilter('category', ['Internships', 'internship', 'Research & Internships']);
+            break;
+          case ExaminationCategory.fellowship:
+            query = query.inFilter('category', ['Fellowships', 'fellowship', 'Scholarships & Fellowships']);
+            break;
+          case ExaminationCategory.privateJob:
+            query = query.inFilter('category', ['Private Jobs', 'Private Jobs & Graduate Programmes', 'private_sector']);
+            break;
+          case ExaminationCategory.admissions:
+          case ExaminationCategory.entranceExam:
+            query = query.inFilter('category', [
+              'Entrance Examinations', 'University Admissions', 'Admissions & Entrance'
+            ]);
+            break;
+          case ExaminationCategory.certification:
+            query = query.inFilter('category', [
+              'Professional Certifications', 'Professional Qualifications'
+            ]);
+            break;
         }
-      } catch (e) {
-        debugPrint('[REXAM] Supabase fetch error: $e. Falling back to local data.');
       }
-    }
+      if (isCentralGovernment != null) {
+        query = query.eq('is_central_government', isCentralGovernment);
+      }
+      if (searchQuery != null && searchQuery.trim().isNotEmpty) {
+        final term = searchQuery.trim();
+        query = query.or('name.ilike.%$term%,title.ilike.%$term%');
+      }
 
-    // Local / Offline fallback filtering
-    await Future.delayed(const Duration(milliseconds: 100));
-    var list = _fallbackData;
-    if (category != null) {
-      list = list.where((e) => e.category == category).toList();
+      final int from = (page - 1) * limit;
+      final int to = from + limit - 1;
+      final response = await query
+          .order('last_verified_at', ascending: false)
+          .range(from, to);
+
+      return (response as List)
+          .map<Examination>((item) => Examination.fromSupabase(item as Map<String, dynamic>))
+          .toList();
+    } catch (e) {
+      debugPrint('[REXAM] Supabase fetch error: $e');
+      return [];
     }
-    if (isCentralGovernment != null) {
-      list = list.where((e) => e.isCentralGovernment == isCentralGovernment).toList();
-    }
-    if (searchQuery != null && searchQuery.trim().isNotEmpty) {
-      final q = searchQuery.toLowerCase();
-      list = list.where((e) {
-        return e.title.toLowerCase().contains(q) ||
-            e.organisation.toLowerCase().contains(q) ||
-            e.eligibleStreams.any((s) => s.toLowerCase().contains(q));
-      }).toList();
-    }
-    return list;
   }
 
   @override
   Future<Examination?> getExaminationById(String id) async {
     final client = SupabaseConfig.client;
-    if (client != null) {
-      try {
-        final res = await client
-            .from('examinations')
-            .select('*, examination_dates(*), eligibility_rules(*), organisations(*)')
-            .or('id.eq.$id,slug.eq.$id')
-            .maybeSingle();
-        if (res != null) {
-          return Examination.fromSupabase(res);
-        }
-      } catch (e) {
-        debugPrint('[REXAM] Fetch examination by id error: $e');
-      }
-    }
+    if (client == null) return null;
 
     try {
-      return _fallbackData.firstWhere(
-        (e) => e.id == id || e.slug == id || id.contains(e.slug) || e.id.contains(id),
-      );
-    } catch (_) {
-      return null;
+      final res = await client
+          .from('examinations')
+          .select('*, examination_dates(*), eligibility_rules(*), organisations(*)')
+          .or('id.eq.$id,slug.eq.$id')
+          .maybeSingle();
+
+      if (res != null) {
+        return Examination.fromSupabase(res);
+      }
+    } catch (e) {
+      debugPrint('[REXAM] Fetch examination by ID error: $e');
     }
+    return null;
   }
 
   @override
   Future<List<Examination>> getRecommendedExaminations(CandidateProfile candidate) async {
-    final all = await getExaminations();
+    final all = await getExaminations(limit: 50);
+    if (all.isEmpty) return [];
+
     return all.where((opp) {
+      // 1. Preferred Category match
       if (candidate.preferredCategories.contains(opp.category)) return true;
-      if (candidate.stream != null) {
-        final stream = candidate.stream!.toLowerCase();
-        if (opp.eligibleStreams.any((s) => s.toLowerCase().contains(stream) || s.toLowerCase().contains('all disciplines'))) {
+
+      // 2. Stream / Branch match
+      if (candidate.stream != null && candidate.stream!.isNotEmpty) {
+        final streamLower = candidate.stream!.toLowerCase();
+        if (opp.eligibleStreams.any((s) =>
+            s.toLowerCase().contains(streamLower) ||
+            s.toLowerCase().contains('all disciplines') ||
+            s.toLowerCase().contains('any discipline'))) {
           return true;
         }
       }
+
+      // 3. Highest Qualification match
+      if (candidate.highestQualification != null && candidate.highestQualification!.isNotEmpty) {
+        final qualLower = candidate.highestQualification!.toLowerCase();
+        if (opp.educationalQualifications.any((q) => q.toLowerCase().contains(qualLower))) {
+          return true;
+        }
+      }
+
       return false;
     }).toList();
   }
 
   @override
   Future<List<Examination>> getClosingSoonExaminations({int limit = 5}) async {
-    final all = await getExaminations();
-    final sorted = List<Examination>.from(all)
-      ..sort((a, b) {
-        if (a.applicationDeadline == null) return 1;
-        if (b.applicationDeadline == null) return -1;
-        return a.applicationDeadline!.compareTo(b.applicationDeadline!);
-      });
-    return sorted.take(limit).toList();
+    final all = await getExaminations(limit: 50);
+    if (all.isEmpty) return [];
+
+    final now = DateTime.now();
+    final validFutureDeadlines = all.where((e) {
+      if (e.applicationDeadline == null) return false;
+      return e.applicationDeadline!.isAfter(now);
+    }).toList()
+      ..sort((a, b) => a.applicationDeadline!.compareTo(b.applicationDeadline!));
+
+    return validFutureDeadlines.take(limit).toList();
   }
 
   @override

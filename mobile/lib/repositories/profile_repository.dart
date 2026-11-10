@@ -4,154 +4,356 @@ import '../models/candidate_profile.dart';
 import '../models/examination.dart';
 
 abstract class ProfileRepository {
-  Future<CandidateProfile> getProfile(String candidateId);
+  Future<CandidateProfile?> getProfile(String candidateId);
   Future<CandidateProfile> updateProfile(CandidateProfile profile);
 }
 
 class SupabaseProfileRepository implements ProfileRepository {
-  CandidateProfile _localProfile = const CandidateProfile(
-    id: 'candidate-rexam-001',
-    email: 'arjun.sharma@rexam.in',
-    fullName: 'Arjun Sharma',
-    gender: 'Male',
-    nationality: 'Indian',
-    state: 'Delhi',
-    district: 'New Delhi',
-    countryOfResidence: 'India',
-    socialCategory: 'OBC-NCL',
-    isPwBD: false,
-    isExServiceman: false,
-    highestQualification: 'B.Tech / B.E.',
-    degreeName: 'Bachelor of Technology',
-    stream: 'Computer Science & Engineering',
-    institution: 'Delhi Technological University (DTU)',
-    isInstitutionRecognized: true,
-    graduationYear: 2024,
-    cgpaOrPercentage: 78.5,
-    hasActiveBacklogs: false,
-    gateScore: 682,
-    gateYear: 2025,
-    hasNetJrf: false,
-    workExperienceYears: 1.5,
-    preferredCategories: [
-      ExaminationCategory.govtRecruitment,
-      ExaminationCategory.psu,
-      ExaminationCategory.scholarship,
-    ],
-    maxApplicationFeeBudget: 1000,
-    willingToRelocate: true,
-    preferredStates: ['Delhi', 'Karnataka', 'Maharashtra'],
-    willingToWorkAnywhereInIndia: true,
-    careerInterests: ['Computer Science', 'Engineering', 'Administration', 'Research'],
-  );
-
   @override
-  Future<CandidateProfile> getProfile(String candidateId) async {
+  Future<CandidateProfile?> getProfile(String candidateId) async {
     final client = SupabaseConfig.client;
-    if (client != null) {
-      try {
-        final profileRes = await client.from('profiles').select().eq('id', candidateId).maybeSingle();
-        final eduRes = await client.from('candidate_education').select().eq('candidate_id', candidateId).maybeSingle();
-        final prefRes = await client.from('candidate_preferences').select().eq('candidate_id', candidateId).maybeSingle();
-
-        if (profileRes != null) {
-          final dob = profileRes['date_of_birth'] != null ? DateTime.tryParse(profileRes['date_of_birth']) : null;
-          final categories = (prefRes?['preferred_categories'] as List?)?.map((c) => ExaminationCategory.fromString(c.toString())).toList() ?? [];
-
-          return CandidateProfile(
-            id: profileRes['id'] ?? candidateId,
-            email: profileRes['email'] ?? 'candidate@rexam.in',
-            fullName: profileRes['full_name'] ?? '',
-            dateOfBirth: dob,
-            gender: profileRes['gender'],
-            nationality: profileRes['nationality'] ?? 'Indian',
-            state: profileRes['state'],
-            district: profileRes['district'],
-            countryOfResidence: profileRes['country_of_residence'] ?? 'India',
-            socialCategory: profileRes['social_category'] ?? 'General',
-            isPwBD: profileRes['is_pwbd'] == true,
-            pwbdDisabilityType: profileRes['pwbd_disability_type'],
-            isExServiceman: profileRes['is_ex_serviceman'] == true,
-            highestQualification: eduRes?['highest_qualification'],
-            degreeName: eduRes?['degree_name'],
-            stream: eduRes?['stream'],
-            institution: eduRes?['institution'],
-            graduationYear: eduRes?['graduation_year'],
-            cgpaOrPercentage: eduRes?['cgpa_or_percentage'] != null ? double.tryParse(eduRes!['cgpa_or_percentage'].toString()) : null,
-            hasActiveBacklogs: eduRes?['has_active_backlogs'] == true,
-            gateScore: eduRes?['gate_score'],
-            gateYear: eduRes?['gate_year'],
-            hasNetJrf: eduRes?['has_net_jrf'] == true,
-            workExperienceYears: eduRes?['work_experience_years'] != null ? double.tryParse(eduRes!['work_experience_years'].toString()) ?? 0.0 : 0.0,
-            preferredCategories: categories.isNotEmpty ? categories : [ExaminationCategory.govtRecruitment, ExaminationCategory.psu],
-            willingToRelocate: prefRes?['willing_to_relocate'] ?? true,
-            preferredStates: (prefRes?['preferred_states'] as List?)?.map((s) => s.toString()).toList() ?? [],
-            maxApplicationFeeBudget: prefRes?['max_application_fee_budget'],
-            careerInterests: (prefRes?['career_interests'] as List?)?.map((c) => c.toString()).toList() ?? ['Engineering', 'Computer Science'],
-          );
-        }
-      } catch (e) {
-        debugPrint('[REXAM] Fetch profile from Supabase error: $e');
-      }
+    if (client == null || candidateId.trim().isEmpty) {
+      return null;
     }
 
-    return _localProfile;
+    try {
+      final profileRes = await client
+          .from('profiles')
+          .select()
+          .eq('id', candidateId)
+          .maybeSingle();
+
+      if (profileRes == null) {
+        return null;
+      }
+
+      final eduRes = await client
+          .from('candidate_education')
+          .select()
+          .eq('candidate_id', candidateId)
+          .maybeSingle();
+
+      final prefRes = await client
+          .from('candidate_preferences')
+          .select()
+          .eq('candidate_id', candidateId)
+          .maybeSingle();
+
+      final dob = profileRes['date_of_birth'] != null
+          ? DateTime.tryParse(profileRes['date_of_birth'])
+          : null;
+
+      final categories = (prefRes?['preferred_categories'] as List?)
+              ?.map((c) => ExaminationCategory.fromString(c.toString()))
+              .toList() ??
+          [];
+
+      final edu = eduRes;
+      final rawCerts = (edu?['certifications'] as List?)?.map((e) => e.toString()).toList() ?? [];
+      String? encodedGradingSystem;
+      double? encodedScaleMax;
+      for (final c in rawCerts) {
+        if (c.startsWith('grading_system:')) {
+          encodedGradingSystem = c.substring('grading_system:'.length).trim();
+        } else if (c.startsWith('grading_scale_max:')) {
+          encodedScaleMax = double.tryParse(c.substring('grading_scale_max:'.length).trim());
+        }
+      }
+
+      final resolvedSystem = edu?['grading_system']?.toString() ??
+          encodedGradingSystem ??
+          (edu?['cgpa'] != null ? 'cgpa' : (edu?['percentage'] != null ? 'percentage' : 'cgpa'));
+
+      final resolvedScaleMax = edu?['grading_scale_max'] != null
+          ? (double.tryParse(edu!['grading_scale_max'].toString()) ??
+              (resolvedSystem == 'percentage' ? 100.0 : (resolvedSystem == 'gpa' ? 4.0 : 10.0)))
+          : (encodedScaleMax ??
+              (resolvedSystem == 'percentage' ? 100.0 : (resolvedSystem == 'gpa' ? 4.0 : 10.0)));
+
+      double? parsedCgpa = edu?['cgpa'] != null ? double.tryParse(edu!['cgpa'].toString()) : null;
+      double? parsedPercentage = edu?['percentage'] != null ? double.tryParse(edu!['percentage'].toString()) : null;
+      double? parsedGpa = edu?['gpa'] != null ? double.tryParse(edu!['gpa'].toString()) : null;
+
+      final rawScore = edu?['cgpa_or_percentage'] != null ? double.tryParse(edu!['cgpa_or_percentage'].toString()) : null;
+      if (rawScore != null) {
+        if (resolvedSystem == 'cgpa' && parsedCgpa == null) parsedCgpa = rawScore;
+        if (resolvedSystem == 'percentage' && parsedPercentage == null) parsedPercentage = rawScore;
+        if (resolvedSystem == 'gpa' && parsedGpa == null) parsedGpa = rawScore;
+      }
+
+      final activeScoreValue = parsedCgpa ?? parsedPercentage ?? parsedGpa ?? rawScore;
+      AcademicScore? resolvedAcademicScore;
+      if (activeScoreValue != null) {
+        resolvedAcademicScore = AcademicScore(
+          scoreValue: activeScoreValue,
+          gradingType: AcademicGradingType.fromString(resolvedSystem),
+          gradingScaleMax: resolvedScaleMax,
+        );
+      }
+
+      return CandidateProfile(
+        id: profileRes['id'] ?? candidateId,
+        email: profileRes['email'] ?? '',
+        fullName: profileRes['full_name'] ?? '',
+        dateOfBirth: dob,
+        gender: profileRes['gender'],
+        nationality: profileRes['nationality'] ?? 'Indian',
+        state: profileRes['state'],
+        district: profileRes['district'],
+        countryOfResidence: profileRes['country_of_residence'] ?? 'India',
+        socialCategory: profileRes['social_category'] ?? 'General',
+        isObcNcl: profileRes['is_obc_ncl'] == true,
+        isPwBD: profileRes['is_pwbd'] == true,
+        pwbdDisabilityType: profileRes['pwbd_disability_type'],
+        isExServiceman: profileRes['is_ex_serviceman'] == true,
+        currentStatus: profileRes['current_status'],
+        class10Year: profileRes['class_10_year'],
+        class10Percentage: profileRes['class_10_percentage'] != null
+            ? double.tryParse(profileRes['class_10_percentage'].toString())
+            : null,
+        class12Year: profileRes['class_12_year'],
+        class12Stream: profileRes['class_12_stream'],
+        class12Percentage: profileRes['class_12_percentage'] != null
+            ? double.tryParse(profileRes['class_12_percentage'].toString())
+            : null,
+        class12GradingSystem: profileRes['class_12_grading_system']?.toString() ?? 'percentage',
+        highestQualification: edu?['highest_qualification'],
+        degreeName: edu?['degree_name'],
+        stream: edu?['stream'],
+        institution: edu?['institution'],
+        university: edu?['university'] ?? edu?['institution'],
+        collegeName: edu?['college_name'],
+        currentYearOfStudy: edu?['current_year_of_study'] != null
+            ? int.tryParse(edu!['current_year_of_study'].toString())
+            : null,
+        currentSemester: edu?['current_semester'] != null
+            ? int.tryParse(edu!['current_semester'].toString())
+            : null,
+        degreeDurationYears: edu?['degree_duration_years'] != null
+            ? int.tryParse(edu!['degree_duration_years'].toString()) ?? 4
+            : 4,
+        academicStatus: edu?['academic_status']?.toString() ??
+            (edu?['is_completed'] == false ? 'pursuing' : 'completed'),
+        gradingSystem: resolvedSystem,
+        gradingScaleMax: resolvedScaleMax,
+        cgpa: parsedCgpa,
+        percentage: parsedPercentage,
+        gpa: parsedGpa,
+        academicScore: resolvedAcademicScore,
+        yearWisePerformance: edu?['year_wise_performance'] is Map
+            ? Map<String, dynamic>.from(edu!['year_wise_performance'])
+            : const {},
+        semesterWisePerformance: edu?['semester_wise_performance'] is Map
+            ? Map<String, dynamic>.from(edu!['semester_wise_performance'])
+            : const {},
+        conversionFormula: eduRes?['conversion_formula']?.toString(),
+        conversionSource: eduRes?['conversion_source']?.toString(),
+        graduationYear: eduRes?['graduation_year'],
+        cgpaOrPercentage: activeScoreValue,
+        degreeStatus: eduRes?['is_completed'] == false ? 'Ongoing' : 'Completed',
+        hasActiveBacklogs: eduRes?['has_active_backlogs'] == true,
+        gateScore: eduRes?['gate_score'],
+        gateYear: eduRes?['gate_year'],
+        hasNetJrf: eduRes?['has_net_jrf'] == true,
+        workExperienceYears: eduRes?['work_experience_years'] != null
+            ? double.tryParse(eduRes!['work_experience_years'].toString()) ?? 0.0
+            : 0.0,
+        preferredCategories: categories,
+        willingToRelocate: prefRes?['willing_to_relocate'] ?? true,
+        preferredStates: (prefRes?['preferred_states'] as List?)
+                ?.map((s) => s.toString())
+                .toList() ??
+            [],
+        maxApplicationFeeBudget: prefRes?['max_application_fee_budget'],
+        careerInterests: (prefRes?['career_interests'] as List?)
+                ?.map((c) => c.toString())
+                .toList() ??
+            [],
+      );
+    } catch (e) {
+      debugPrint('[REXAM] Fetch profile from Supabase error: $e');
+      return null;
+    }
   }
 
   @override
   Future<CandidateProfile> updateProfile(CandidateProfile profile) async {
     final client = SupabaseConfig.client;
-    if (client != null) {
+    if (client == null) {
+      throw Exception('Supabase connection unavailable. Cannot persist profile.');
+    }
+
+    final nowIso = DateTime.now().toUtc().toIso8601String();
+
+    try {
+      // 1. Upsert into public.profiles
       try {
-        await client.from('profiles').upsert({
-          'id': profile.id,
-          'email': profile.email,
-          'full_name': profile.fullName,
-          'date_of_birth': profile.dateOfBirth?.toIso8601String().split('T').first,
-          'gender': profile.gender,
-          'nationality': profile.nationality,
-          'state': profile.state,
-          'district': profile.district,
-          'social_category': profile.socialCategory,
-          'is_pwbd': profile.isPwBD,
-          'is_ex_serviceman': profile.isExServiceman,
-          'updated_at': DateTime.now().toIso8601String(),
-        });
+        await client.from('profiles').upsert(
+          {
+            'id': profile.id,
+            'email': profile.email,
+            'full_name': profile.fullName,
+            'date_of_birth': profile.dateOfBirth?.toIso8601String().split('T').first,
+            'gender': profile.gender,
+            'nationality': profile.nationality,
+            'state': profile.state,
+            'district': profile.district,
+            'country_of_residence': profile.countryOfResidence,
+            'current_status': profile.currentStatus,
+            'social_category': profile.socialCategory,
+            'is_obc_ncl': profile.isObcNcl,
+            'is_pwbd': profile.isPwBD,
+            'pwbd_disability_type': profile.pwbdDisabilityType,
+            'is_ex_serviceman': profile.isExServiceman,
+            'class_10_year': profile.class10Year,
+            'class_10_percentage': profile.class10Percentage,
+            'class_12_year': profile.class12Year,
+            'class_12_stream': profile.class12Stream,
+            'class_12_percentage': profile.class12Percentage,
+            'class_12_grading_system': profile.class12GradingSystem,
+            'onboarding_completed_at': nowIso,
+            'updated_at': nowIso,
+          },
+          onConflict: 'id',
+        );
+      } catch (profileErr) {
+        debugPrint('[REXAM] Extended profile upsert note, falling back to core columns: $profileErr');
+        await client.from('profiles').upsert(
+          {
+            'id': profile.id,
+            'email': profile.email,
+            'full_name': profile.fullName,
+            'date_of_birth': profile.dateOfBirth?.toIso8601String().split('T').first,
+            'gender': profile.gender,
+            'nationality': profile.nationality,
+            'state': profile.state,
+            'district': profile.district,
+            'country_of_residence': profile.countryOfResidence,
+            'social_category': profile.socialCategory,
+            'is_pwbd': profile.isPwBD,
+            'pwbd_disability_type': profile.pwbdDisabilityType,
+            'is_ex_serviceman': profile.isExServiceman,
+            'class_10_year': profile.class10Year,
+            'class_12_year': profile.class12Year,
+            'class_12_stream': profile.class12Stream,
+            'updated_at': nowIso,
+          },
+          onConflict: 'id',
+        );
+      }
 
-        if (profile.highestQualification != null) {
-          await client.from('candidate_education').upsert({
-            'candidate_id': profile.id,
-            'highest_qualification': profile.highestQualification,
-            'degree_name': profile.degreeName,
-            'stream': profile.stream,
-            'institution': profile.institution,
-            'graduation_year': profile.graduationYear,
-            'cgpa_or_percentage': profile.cgpaOrPercentage,
-            'has_active_backlogs': profile.hasActiveBacklogs,
-            'gate_score': profile.gateScore,
-            'gate_year': profile.gateYear,
-            'has_net_jrf': profile.hasNetJrf,
-            'work_experience_years': profile.workExperienceYears,
-            'updated_at': DateTime.now().toIso8601String(),
-          }, onConflict: 'candidate_id');
+      // 2. Persist candidate_education safely
+      try {
+        final existingEdu = await client
+            .from('candidate_education')
+            .select('id')
+            .eq('candidate_id', profile.id)
+            .maybeSingle();
+
+        final systemMetaTag = 'grading_system:${profile.gradingSystem}';
+        final scaleMetaTag = 'grading_scale_max:${profile.gradingScaleMax}';
+        final preservedCerts = List<String>.from(profile.certifications)
+          ..removeWhere((c) => c.startsWith('grading_system:') || c.startsWith('grading_scale_max:'))
+          ..addAll([systemMetaTag, scaleMetaTag]);
+
+        final baseEduData = {
+          'candidate_id': profile.id,
+          'highest_qualification': profile.highestQualification ?? 'Undergraduate',
+          'degree_name': profile.degreeName,
+          'stream': profile.stream,
+          'institution': profile.institution,
+          'graduation_year': profile.graduationYear,
+          'cgpa_or_percentage': profile.effectiveScore,
+          'has_active_backlogs': profile.hasActiveBacklogs,
+          'gate_score': profile.gateScore,
+          'gate_year': profile.gateYear,
+          'has_net_jrf': profile.hasNetJrf,
+          'work_experience_years': profile.workExperienceYears,
+          'certifications': preservedCerts,
+          'updated_at': nowIso,
+        };
+
+        final extendedEduData = {
+          ...baseEduData,
+          'university': profile.university ?? profile.institution,
+          'college_name': profile.collegeName,
+          'current_year_of_study': profile.currentYearOfStudy,
+          'current_semester': profile.currentSemester,
+          'degree_duration_years': profile.degreeDurationYears,
+          'academic_status': profile.academicStatus,
+          'grading_system': profile.gradingSystem,
+          'grading_scale_max': profile.gradingScaleMax,
+          'cgpa': profile.cgpa,
+          'percentage': profile.percentage,
+          'gpa': profile.gpa,
+          'year_wise_performance': profile.yearWisePerformance,
+          'semester_wise_performance': profile.semesterWisePerformance,
+          'conversion_formula': profile.conversionFormula,
+          'conversion_source': profile.conversionSource,
+          'is_completed': profile.isGraduated,
+        };
+
+        try {
+          if (existingEdu != null) {
+            await client
+                .from('candidate_education')
+                .update(extendedEduData)
+                .eq('candidate_id', profile.id);
+          } else {
+            await client.from('candidate_education').insert(extendedEduData);
+          }
+        } catch (extErr) {
+          debugPrint('[REXAM] Extended education update notice: $extErr. Falling back to base fields with metadata encoding.');
+          if (existingEdu != null) {
+            await client
+                .from('candidate_education')
+                .update(baseEduData)
+                .eq('candidate_id', profile.id);
+          } else {
+            await client.from('candidate_education').insert(baseEduData);
+          }
         }
+      } catch (eduErr) {
+        debugPrint('[REXAM] Candidate education save warning: $eduErr');
+      }
 
-        await client.from('candidate_preferences').upsert({
+      // 3. Persist candidate_preferences safely
+      try {
+        final existingPref = await client
+            .from('candidate_preferences')
+            .select('id')
+            .eq('candidate_id', profile.id)
+            .maybeSingle();
+
+        final prefData = {
           'candidate_id': profile.id,
           'preferred_categories': profile.preferredCategories.map((c) => c.label).toList(),
           'preferred_states': profile.preferredStates,
           'willing_to_relocate': profile.willingToRelocate,
+          'willing_to_work_anywhere_in_india': profile.willingToWorkAnywhereInIndia,
           'max_application_fee_budget': profile.maxApplicationFeeBudget,
           'career_interests': profile.careerInterests,
-          'updated_at': DateTime.now().toIso8601String(),
-        }, onConflict: 'candidate_id');
-      } catch (e) {
-        debugPrint('[REXAM] Update profile to Supabase error: $e');
-      }
-    }
+          'updated_at': nowIso,
+        };
 
-    _localProfile = profile;
-    return _localProfile;
+        if (existingPref != null) {
+          await client
+              .from('candidate_preferences')
+              .update(prefData)
+              .eq('candidate_id', profile.id);
+        } else {
+          await client.from('candidate_preferences').insert(prefData);
+        }
+      } catch (prefErr) {
+        debugPrint('[REXAM] Candidate preferences save warning: $prefErr');
+      }
+
+      // 4. Return updated profile
+      final verified = await getProfile(profile.id);
+      return verified ?? profile;
+    } catch (e) {
+      debugPrint('[REXAM] Update profile Supabase critical error: $e');
+      throw Exception('Failed to persist profile: $e');
+    }
   }
 }
-

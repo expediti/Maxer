@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../constants/app_colors.dart';
 import '../constants/app_dimensions.dart';
 
 class EmptyStateView extends StatelessWidget {
@@ -19,9 +20,6 @@ class EmptyStateView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(AppDimensions.space24),
@@ -31,30 +29,33 @@ class EmptyStateView extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(AppDimensions.space16),
               decoration: BoxDecoration(
-                color: theme.colorScheme.surface,
+                color: AppColors.surface,
                 shape: BoxShape.circle,
-                border: Border.all(color: theme.colorScheme.outline),
+                border: Border.all(color: AppColors.border),
               ),
               child: Icon(
                 icon,
-                size: 40,
-                color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF6B7280),
+                size: 36,
+                color: AppColors.textMuted,
               ),
             ),
             const SizedBox(height: AppDimensions.space16),
             Text(
               title,
               textAlign: TextAlign.center,
-              style: theme.textTheme.titleMedium?.copyWith(
+              style: const TextStyle(
+                fontSize: 16,
                 fontWeight: FontWeight.w600,
+                color: AppColors.textMain,
               ),
             ),
             const SizedBox(height: AppDimensions.space8),
             Text(
               description,
               textAlign: TextAlign.center,
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF6B7280),
+              style: const TextStyle(
+                fontSize: 13,
+                color: AppColors.textMuted,
                 height: 1.45,
               ),
             ),
@@ -63,7 +64,7 @@ class EmptyStateView extends StatelessWidget {
               ElevatedButton(
                 onPressed: onAction,
                 style: ElevatedButton.styleFrom(
-                  minimumSize: const Size(160, 44),
+                  minimumSize: const Size(160, 42),
                 ),
                 child: Text(actionLabel!),
               ),
@@ -74,4 +75,3 @@ class EmptyStateView extends StatelessWidget {
     );
   }
 }
-

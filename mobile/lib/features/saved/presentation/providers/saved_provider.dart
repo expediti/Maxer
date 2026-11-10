@@ -68,7 +68,7 @@ final savedProvider = StateNotifierProvider<SavedNotifier, List<Opportunity>>((r
   final savedRepo = ref.watch(savedRepositoryProvider);
   final examRepo = ref.watch(examinationRepositoryProvider);
   final authState = ref.watch(authProvider);
-  final candidateId = authState.user?.id ?? 'candidate-rexam-001';
+  final candidateId = authState.user?.id ?? '';
 
   return SavedNotifier(
     savedRepo: savedRepo,

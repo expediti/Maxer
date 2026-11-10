@@ -12,14 +12,23 @@ class ProfileNotifier extends StateNotifier<AsyncValue<CandidateProfile>> {
   final String _candidateId;
 
   ProfileNotifier(this._repository, this._candidateId) : super(const AsyncValue.loading()) {
-    loadProfile();
+    if (_candidateId.isNotEmpty) {
+      loadProfile();
+    } else {
+      state = AsyncValue.error('User is not authenticated.', StackTrace.empty);
+    }
   }
 
   Future<void> loadProfile() async {
+    if (_candidateId.isEmpty) return;
     state = const AsyncValue.loading();
     try {
       final profile = await _repository.getProfile(_candidateId);
-      state = AsyncValue.data(profile);
+      if (profile != null) {
+        state = AsyncValue.data(profile);
+      } else {
+        state = AsyncValue.error('Profile not initialized. Please complete onboarding.', StackTrace.empty);
+      }
     } catch (e, st) {
       state = AsyncValue.error(e, st);
     }
@@ -43,6 +52,6 @@ class ProfileNotifier extends StateNotifier<AsyncValue<CandidateProfile>> {
 final profileProvider = StateNotifierProvider<ProfileNotifier, AsyncValue<CandidateProfile>>((ref) {
   final repo = ref.watch(candidateRepositoryProvider);
   final authState = ref.watch(authProvider);
-  final candidateId = authState.user?.id ?? 'candidate-rexam-001';
+  final candidateId = authState.user?.id ?? '';
   return ProfileNotifier(repo, candidateId);
 });

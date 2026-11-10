@@ -6,33 +6,20 @@ class UserSession {
   final String id;
   final String email;
   final String displayName;
-  final bool isGuest;
   final DateTime createdAt;
 
   const UserSession({
     required this.id,
     required this.email,
     required this.displayName,
-    this.isGuest = false,
     required this.createdAt,
   });
-
-  static UserSession guest() {
-    return UserSession(
-      id: 'guest-candidate-id',
-      email: 'guest@rexam.app',
-      displayName: 'Guest Candidate',
-      isGuest: true,
-      createdAt: DateTime.now(),
-    );
-  }
 }
 
 abstract class AuthService {
   Future<UserSession> signInWithGoogle();
   Future<UserSession> signInWithEmail(String email, String password);
   Future<UserSession> signUpWithEmail(String email, String password, String fullName);
-  Future<UserSession> signInAsGuest();
   Future<void> sendPasswordReset(String email);
   Future<void> signOut();
   Future<UserSession?> getCurrentUser();
@@ -40,38 +27,32 @@ abstract class AuthService {
 }
 
 class SupabaseAuthService implements AuthService {
-  UserSession? _cachedGuestUser;
-
   @override
   Future<UserSession> signInWithGoogle() async {
     final client = SupabaseConfig.client;
     if (client == null) {
-      // Offline / demo fallback
-      debugPrint('[REXAM] Supabase not connected. Emulating Google sign-in.');
-      _cachedGuestUser = UserSession(
-        id: 'google-candidate-001',
-        email: 'arjun.sharma@rexam.in',
-        displayName: 'Arjun Sharma',
-        createdAt: DateTime(2026, 1, 15),
-      );
-      return _cachedGuestUser!;
+      throw Exception('Supabase connection unavailable.');
     }
 
     try {
-      await client.auth.signInWithOAuth(
+      final launched = await client.auth.signInWithOAuth(
         OAuthProvider.google,
         redirectTo: 'io.supabase.rexam://login-callback',
+        authScreenLaunchMode: LaunchMode.externalApplication,
       );
-      final currentUser = client.auth.currentUser;
+      if (!launched) {
+        throw Exception('Failed to open browser for Google authentication.');
+      }
+      final user = client.auth.currentUser;
       return UserSession(
-        id: currentUser?.id ?? 'candidate-rexam-001',
-        email: currentUser?.email ?? 'candidate@rexam.in',
-        displayName: currentUser?.userMetadata?['full_name'] ?? 'Candidate',
-        createdAt: DateTime.now(),
+        id: user?.id ?? '',
+        email: user?.email ?? '',
+        displayName: user?.userMetadata?['full_name'] ?? 'Candidate',
+        createdAt: user != null ? (DateTime.tryParse(user.createdAt) ?? DateTime.now()) : DateTime.now(),
       );
     } catch (e) {
       debugPrint('[REXAM] Google Auth Error: $e');
-      throw Exception('Google sign-in could not be completed: $e');
+      throw Exception(e.toString().replaceFirst('Exception: ', '').replaceFirst('AuthException: ', ''));
     }
   }
 
@@ -79,16 +60,7 @@ class SupabaseAuthService implements AuthService {
   Future<UserSession> signInWithEmail(String email, String password) async {
     final client = SupabaseConfig.client;
     if (client == null) {
-      if (email.trim().isEmpty || password.length < 6) {
-        throw Exception('Invalid email or password (minimum 6 characters required).');
-      }
-      _cachedGuestUser = UserSession(
-        id: 'candidate-rexam-001',
-        email: email.trim(),
-        displayName: email.split('@').first.toUpperCase(),
-        createdAt: DateTime.now(),
-      );
-      return _cachedGuestUser!;
+      throw Exception('Supabase connection unavailable.');
     }
 
     try {
@@ -105,7 +77,7 @@ class SupabaseAuthService implements AuthService {
         createdAt: DateTime.tryParse(user.createdAt) ?? DateTime.now(),
       );
     } catch (e) {
-      throw Exception(e.toString().replaceFirst('Exception: ', ''));
+      throw Exception(e.toString().replaceFirst('Exception: ', '').replaceFirst('AuthException: ', ''));
     }
   }
 
@@ -113,13 +85,7 @@ class SupabaseAuthService implements AuthService {
   Future<UserSession> signUpWithEmail(String email, String password, String fullName) async {
     final client = SupabaseConfig.client;
     if (client == null) {
-      _cachedGuestUser = UserSession(
-        id: 'candidate-new-${DateTime.now().millisecondsSinceEpoch}',
-        email: email.trim(),
-        displayName: fullName.trim().isEmpty ? 'Candidate' : fullName.trim(),
-        createdAt: DateTime.now(),
-      );
-      return _cachedGuestUser!;
+      throw Exception('Supabase connection unavailable.');
     }
 
     try {
@@ -129,7 +95,7 @@ class SupabaseAuthService implements AuthService {
         data: {'full_name': fullName.trim()},
       );
       final user = res.user;
-      if (user == null) throw Exception('Sign-up failed.');
+      if (user == null) throw Exception('Registration failed.');
       return UserSession(
         id: user.id,
         email: user.email ?? email,
@@ -137,72 +103,61 @@ class SupabaseAuthService implements AuthService {
         createdAt: DateTime.now(),
       );
     } catch (e) {
-      throw Exception(e.toString().replaceFirst('Exception: ', ''));
+      throw Exception(e.toString().replaceFirst('Exception: ', '').replaceFirst('AuthException: ', ''));
     }
-  }
-
-  @override
-  Future<UserSession> signInAsGuest() async {
-    _cachedGuestUser = UserSession.guest();
-    return _cachedGuestUser!;
   }
 
   @override
   Future<void> sendPasswordReset(String email) async {
     final client = SupabaseConfig.client;
-    if (client != null) {
+    if (client == null) return;
+    try {
       await client.auth.resetPasswordForEmail(email.trim());
+    } catch (e) {
+      throw Exception(e.toString().replaceFirst('Exception: ', '').replaceFirst('AuthException: ', ''));
     }
   }
 
   @override
   Future<void> signOut() async {
-    _cachedGuestUser = null;
     final client = SupabaseConfig.client;
     if (client != null) {
-      await client.auth.signOut();
+      try {
+        await client.auth.signOut();
+      } catch (e) {
+        debugPrint('[REXAM] Sign out error: $e');
+      }
     }
   }
 
   @override
   Future<UserSession?> getCurrentUser() async {
-    if (_cachedGuestUser != null) return _cachedGuestUser;
     final client = SupabaseConfig.client;
-    if (client == null) {
-      // Default initial session for immediate interactive exploration
-      return UserSession(
-        id: 'candidate-rexam-001',
-        email: 'arjun.sharma@rexam.in',
-        displayName: 'Arjun Sharma',
-        createdAt: DateTime(2026, 1, 15),
-      );
+    if (client != null) {
+      final user = client.auth.currentUser;
+      if (user != null) {
+        return UserSession(
+          id: user.id,
+          email: user.email ?? '',
+          displayName: user.userMetadata?['full_name'] ?? user.email?.split('@').first ?? 'Candidate',
+          createdAt: DateTime.tryParse(user.createdAt) ?? DateTime.now(),
+        );
+      }
     }
-
-    final user = client.auth.currentUser;
-    if (user == null) return null;
-    return UserSession(
-      id: user.id,
-      email: user.email ?? '',
-      displayName: user.userMetadata?['full_name'] ?? user.email?.split('@').first ?? 'Candidate',
-      createdAt: DateTime.tryParse(user.createdAt) ?? DateTime.now(),
-    );
+    return null;
   }
 
   @override
-  Stream<UserSession?> get onAuthStateChange async* {
+  Stream<UserSession?> get onAuthStateChange {
     final client = SupabaseConfig.client;
-    if (client == null) {
-      yield await getCurrentUser();
-      return;
-    }
-
-    yield* client.auth.onAuthStateChange.map((event) {
-      final user = event.session?.user;
-      if (user == null) return _cachedGuestUser;
+    if (client == null) return Stream.value(null);
+    return client.auth.onAuthStateChange.map((data) {
+      final user = data.session?.user;
+      if (user == null) return null;
       return UserSession(
         id: user.id,
         email: user.email ?? '',
-        displayName: user.userMetadata?['full_name'] ?? 'Candidate',
+        displayName: user.userMetadata?['full_name'] ?? user.email?.split('@').first ?? 'Candidate',
         createdAt: DateTime.tryParse(user.createdAt) ?? DateTime.now(),
       );
     });

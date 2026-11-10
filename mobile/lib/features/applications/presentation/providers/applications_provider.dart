@@ -105,7 +105,7 @@ class ApplicationsNotifier extends StateNotifier<List<ApplicationTrackerItem>> {
 final applicationsProvider = StateNotifierProvider<ApplicationsNotifier, List<ApplicationTrackerItem>>((ref) {
   final appRepo = ref.watch(applicationRepositoryProvider);
   final authState = ref.watch(authProvider);
-  final candidateId = authState.user?.id ?? 'candidate-rexam-001';
+  final candidateId = authState.user?.id ?? '';
 
   return ApplicationsNotifier(
     applicationRepo: appRepo,

@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../features/auth/domain/auth_state.dart';
+import '../../features/auth/presentation/providers/auth_provider.dart';
 import '../../features/auth/presentation/splash_screen.dart';
 import '../../features/auth/presentation/welcome_screen.dart';
 import '../../features/auth/presentation/onboarding_screen.dart';
 import '../../features/auth/presentation/auth_screen.dart';
 import '../../features/profile/presentation/profile_wizard_screen.dart';
+import '../../features/profile/presentation/edit_profile_screen.dart';
+import '../../features/profile/presentation/qualifications_screen.dart';
 import '../../features/profile/presentation/profile_screen.dart';
 import '../../features/opportunities/presentation/discover_screen.dart';
 import '../../features/opportunities/presentation/explorer_screen.dart';
@@ -21,9 +25,46 @@ final _rootNavigatorKey = GlobalKey<NavigatorState>();
 final _shellNavigatorKey = GlobalKey<NavigatorState>();
 
 final routerProvider = Provider<GoRouter>((ref) {
+  final authNotifier = ValueNotifier<AuthState>(ref.read(authProvider));
+  ref.listen<AuthState>(authProvider, (_, next) {
+    authNotifier.value = next;
+  });
+  ref.onDispose(authNotifier.dispose);
+
   return GoRouter(
     navigatorKey: _rootNavigatorKey,
     initialLocation: '/splash',
+    refreshListenable: authNotifier,
+    redirect: (context, state) {
+      final authState = authNotifier.value;
+      final loc = state.matchedLocation;
+
+      // Allow splash to run its initial transition
+      if (loc == '/splash') return null;
+
+      final isAuthRoute = loc == '/welcome' || loc == '/auth' || loc == '/onboarding';
+
+      // Rule: Unauthenticated candidates cannot access protected application routes
+      if (!authState.isAuthenticated && !isAuthRoute) {
+        return '/welcome';
+      }
+
+      // Rule: Mandatory Onboarding Enforcement:
+      // Authenticated users with incomplete profiles MUST complete onboarding before entering the dashboard.
+      if (authState.isAuthenticated && !authState.hasCompletedOnboarding) {
+        if (loc != '/profile/wizard') {
+          return '/profile/wizard';
+        }
+        return null;
+      }
+
+      // Rule: Existing authenticated users with complete profiles bypass auth screens
+      if (authState.isAuthenticated && authState.hasCompletedOnboarding && isAuthRoute) {
+        return '/discover';
+      }
+
+      return null;
+    },
     routes: [
       GoRoute(
         path: '/splash',
@@ -49,6 +90,16 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/profile/wizard',
         parentNavigatorKey: _rootNavigatorKey,
         builder: (context, state) => const ProfileWizardScreen(),
+      ),
+      GoRoute(
+        path: '/profile/edit',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const EditProfileScreen(),
+      ),
+      GoRoute(
+        path: '/profile/qualifications',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const QualificationsScreen(),
       ),
       GoRoute(
         path: '/opportunities/:id',
@@ -93,7 +144,10 @@ final routerProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: '/explorer',
-            builder: (context, state) => const ExplorerScreen(),
+            builder: (context, state) {
+              final tab = state.uri.queryParameters['tab'] ?? state.uri.queryParameters['section'];
+              return ExplorerScreen(initialSection: tab == 'eligible' ? 1 : 0);
+            },
           ),
           GoRoute(
             path: '/saved',

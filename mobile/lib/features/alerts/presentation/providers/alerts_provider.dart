@@ -73,7 +73,7 @@ class AlertsNotifier extends StateNotifier<List<AlertItem>> {
 final alertsProvider = StateNotifierProvider<AlertsNotifier, List<AlertItem>>((ref) {
   final notifRepo = ref.watch(notificationRepositoryProvider);
   final authState = ref.watch(authProvider);
-  final candidateId = authState.user?.id ?? 'candidate-rexam-001';
+  final candidateId = authState.user?.id ?? '';
 
   return AlertsNotifier(
     notifRepo: notifRepo,

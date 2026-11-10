@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
+
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_dimensions.dart';
 import '../../../core/theme/app_typography.dart';
@@ -22,18 +24,18 @@ class _ApplicationsScreenState extends ConsumerState<ApplicationsScreen> {
   Color _getStatusColor(ApplicationStatus status) {
     switch (status) {
       case ApplicationStatus.interested:
-        return AppColors.info;
+        return AppColors.textMuted;
       case ApplicationStatus.preparingDocuments:
       case ApplicationStatus.readyToApply:
         return AppColors.warning;
       case ApplicationStatus.applied:
-        return AppColors.primaryBlue;
+        return AppColors.primaryGreen;
       case ApplicationStatus.admitCardReleased:
       case ApplicationStatus.examCompleted:
-        return Colors.indigo;
+        return const Color(0xFF60A5FA); // Info blue
       case ApplicationStatus.resultDeclared:
       case ApplicationStatus.selected:
-        return AppColors.success;
+        return AppColors.primaryGreen;
       case ApplicationStatus.rejected:
       case ApplicationStatus.withdrawn:
         return AppColors.error;
@@ -49,7 +51,15 @@ class _ApplicationsScreenState extends ConsumerState<ApplicationsScreen> {
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) => AlertDialog(
-          title: Text('Update Application Stage', style: AppTypography.screenTitle),
+          backgroundColor: AppColors.surface,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppDimensions.radiusCard),
+            side: const BorderSide(color: AppColors.border),
+          ),
+          title: Text(
+            'Update Application Stage',
+            style: AppTypography.screenTitle.copyWith(fontSize: 18),
+          ),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -57,9 +67,19 @@ class _ApplicationsScreenState extends ConsumerState<ApplicationsScreen> {
               children: [
                 DropdownButtonFormField<ApplicationStatus>(
                   initialValue: current,
-                  decoration: const InputDecoration(labelText: 'Status Stage'),
+                  dropdownColor: AppColors.secondarySurface,
+                  decoration: const InputDecoration(
+                    labelText: 'Status Stage',
+                    prefixIcon: Icon(LucideIcons.clipboardCheck, size: 18, color: AppColors.primaryGreen),
+                  ),
                   items: ApplicationStatus.values.map((s) {
-                    return DropdownMenuItem(value: s, child: Text(s.label, style: const TextStyle(fontSize: 13)));
+                    return DropdownMenuItem(
+                      value: s,
+                      child: Text(
+                        s.label,
+                        style: const TextStyle(fontSize: 13, color: AppColors.textMain),
+                      ),
+                    );
                   }).toList(),
                   onChanged: (val) {
                     if (val != null) setDialogState(() => current = val);
@@ -68,23 +88,29 @@ class _ApplicationsScreenState extends ConsumerState<ApplicationsScreen> {
                 const SizedBox(height: AppDimensions.space12),
                 TextField(
                   controller: appNumController,
-                  decoration: const InputDecoration(labelText: 'Application / Registration Number'),
+                  style: const TextStyle(color: AppColors.textMain, fontSize: 13),
+                  decoration: const InputDecoration(
+                    labelText: 'Roll No / Registration ID',
+                    prefixIcon: Icon(LucideIcons.hash, size: 18, color: AppColors.textMuted),
+                  ),
                 ),
                 const SizedBox(height: AppDimensions.space12),
                 TextField(
                   controller: notesController,
                   maxLines: 2,
-                  decoration: const InputDecoration(labelText: 'Personal Notes & Checklist'),
+                  style: const TextStyle(color: AppColors.textMain, fontSize: 13),
+                  decoration: const InputDecoration(
+                    labelText: 'Personal Notes & Checklist',
+                    prefixIcon: Icon(LucideIcons.fileText, size: 18, color: AppColors.textMuted),
+                  ),
                 ),
               ],
             ),
           ),
           actions: [
             TextButton(
-              onPressed: () {
-                _showConfirmDeleteDialog(context, item);
-              },
-              child: Text('Remove', style: TextStyle(color: AppColors.error)),
+              onPressed: () => _showConfirmDeleteDialog(context, item),
+              child: const Text('Remove', style: TextStyle(color: AppColors.error)),
             ),
             ElevatedButton(
               onPressed: () {
@@ -96,10 +122,13 @@ class _ApplicationsScreenState extends ConsumerState<ApplicationsScreen> {
                     );
                 Navigator.of(ctx).pop();
                 ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Updated to ${current.label}')),
+                  SnackBar(
+                    content: Text('Stage updated: ${current.label}'),
+                    backgroundColor: AppColors.primaryGreen,
+                  ),
                 );
               },
-              child: const Text('Update'),
+              child: const Text('Save'),
             ),
           ],
         ),
@@ -111,12 +140,20 @@ class _ApplicationsScreenState extends ConsumerState<ApplicationsScreen> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.surface,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppDimensions.radiusCard),
+          side: const BorderSide(color: AppColors.border),
+        ),
         title: const Text('Remove from Tracker?'),
-        content: Text('Are you sure you want to stop tracking "${item.examination.title}"?'),
+        content: Text(
+          'Are you sure you want to stop tracking "${item.examination.title}"?',
+          style: const TextStyle(color: AppColors.textMuted),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Cancel'),
+            child: const Text('Cancel', style: TextStyle(color: AppColors.textMuted)),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
@@ -134,8 +171,6 @@ class _ApplicationsScreenState extends ConsumerState<ApplicationsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
     final allTrackers = ref.watch(applicationsProvider);
 
     final filtered = allTrackers.where((item) {
@@ -144,9 +179,14 @@ class _ApplicationsScreenState extends ConsumerState<ApplicationsScreen> {
     }).toList();
 
     return Scaffold(
-      backgroundColor: theme.scaffoldBackgroundColor,
+      backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text('Application Tracker'),
+        backgroundColor: AppColors.background,
+        elevation: 0,
+        title: Text(
+          'Application Tracker',
+          style: AppTypography.screenTitle.copyWith(fontSize: 18),
+        ),
       ),
       body: SafeArea(
         child: Column(
@@ -154,12 +194,29 @@ class _ApplicationsScreenState extends ConsumerState<ApplicationsScreen> {
             // Stage Filter Chips
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: AppDimensions.space16, vertical: AppDimensions.space8),
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppDimensions.space16,
+                vertical: AppDimensions.space8,
+              ),
               child: Row(
                 children: [
-                  ChoiceChip(
+                  FilterChip(
                     label: const Text('All Stages'),
                     selected: _filterStatus == null,
+                    showCheckmark: false,
+                    selectedColor: AppColors.primaryGreen,
+                    backgroundColor: AppColors.surface,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(AppDimensions.radiusSmall),
+                      side: BorderSide(
+                        color: _filterStatus == null ? AppColors.primaryGreen : AppColors.border,
+                      ),
+                    ),
+                    labelStyle: TextStyle(
+                      color: _filterStatus == null ? AppColors.background : AppColors.textMain,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 12,
+                    ),
                     onSelected: (selected) {
                       if (selected) setState(() => _filterStatus = null);
                     },
@@ -169,9 +226,23 @@ class _ApplicationsScreenState extends ConsumerState<ApplicationsScreen> {
                     final isSelected = _filterStatus == status;
                     return Padding(
                       padding: const EdgeInsets.only(right: AppDimensions.space8),
-                      child: ChoiceChip(
+                      child: FilterChip(
                         label: Text(status.label),
                         selected: isSelected,
+                        showCheckmark: false,
+                        selectedColor: AppColors.primaryGreen,
+                        backgroundColor: AppColors.surface,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(AppDimensions.radiusSmall),
+                          side: BorderSide(
+                            color: isSelected ? AppColors.primaryGreen : AppColors.border,
+                          ),
+                        ),
+                        labelStyle: TextStyle(
+                          color: isSelected ? AppColors.background : AppColors.textMain,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 12,
+                        ),
                         onSelected: (selected) {
                           setState(() => _filterStatus = selected ? status : null);
                         },
@@ -181,12 +252,12 @@ class _ApplicationsScreenState extends ConsumerState<ApplicationsScreen> {
                 ],
               ),
             ),
-            Divider(color: theme.colorScheme.outline),
+            const Divider(color: AppColors.border, height: 1),
 
             // Content List
             Expanded(
               child: RefreshIndicator(
-                color: AppColors.primaryBlue,
+                color: AppColors.primaryGreen,
                 onRefresh: () async {
                   await ref.read(applicationsProvider.notifier).loadApplications();
                 },
@@ -196,11 +267,11 @@ class _ApplicationsScreenState extends ConsumerState<ApplicationsScreen> {
                         children: [
                           const SizedBox(height: 80),
                           EmptyStateView(
-                            icon: Icons.assignment_outlined,
+                            icon: LucideIcons.clipboardCheck,
                             title: 'No Tracked Applications',
                             description: _filterStatus != null
-                                ? 'No applications in stage "${_filterStatus!.label}".'
-                                : 'Track examinations you intend to sit for to log your registration ID, exam dates, and preparation milestones.',
+                                ? 'No applications currently in stage "${_filterStatus!.label}".'
+                                : 'Track examinations you intend to sit for to log your registration ID, exam dates, and milestone preparation notes.',
                             actionLabel: 'Browse Examinations',
                             onAction: () => context.go('/explorer'),
                           ),
@@ -218,9 +289,9 @@ class _ApplicationsScreenState extends ConsumerState<ApplicationsScreen> {
                             margin: const EdgeInsets.only(bottom: AppDimensions.space12),
                             padding: const EdgeInsets.all(AppDimensions.space16),
                             decoration: BoxDecoration(
-                              color: theme.cardColor,
-                              borderRadius: AppDimensions.roundedDefault,
-                              border: Border.all(color: theme.colorScheme.outline),
+                              color: AppColors.surface,
+                              borderRadius: BorderRadius.circular(AppDimensions.radiusCard),
+                              border: Border.all(color: AppColors.border),
                             ),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
@@ -233,7 +304,7 @@ class _ApplicationsScreenState extends ConsumerState<ApplicationsScreen> {
                                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                                       decoration: BoxDecoration(
                                         color: statusColor.withValues(alpha: 0.12),
-                                        borderRadius: AppDimensions.roundedSmall,
+                                        borderRadius: BorderRadius.circular(AppDimensions.radiusSmall),
                                         border: Border.all(color: statusColor.withValues(alpha: 0.3)),
                                       ),
                                       child: Text(
@@ -247,8 +318,11 @@ class _ApplicationsScreenState extends ConsumerState<ApplicationsScreen> {
                                     ),
                                     TextButton.icon(
                                       onPressed: () => _showStatusDialog(context, item),
-                                      icon: const Icon(Icons.edit_note, size: 16),
-                                      label: const Text('Update'),
+                                      icon: const Icon(LucideIcons.edit3, size: 14, color: AppColors.primaryGreen),
+                                      label: const Text(
+                                        'Update Stage',
+                                        style: TextStyle(color: AppColors.primaryGreen, fontSize: 12),
+                                      ),
                                       style: TextButton.styleFrom(
                                         padding: const EdgeInsets.symmetric(horizontal: 8),
                                         visualDensity: VisualDensity.compact,
@@ -260,7 +334,7 @@ class _ApplicationsScreenState extends ConsumerState<ApplicationsScreen> {
 
                                 // Title
                                 InkWell(
-                                  onTap: () => context.go('/opportunities/${item.examinationId}'),
+                                  onTap: () => context.push('/opportunities/${item.examinationId}'),
                                   child: Text(
                                     item.examination.title,
                                     style: AppTypography.cardTitle.copyWith(fontSize: 15),
@@ -271,23 +345,33 @@ class _ApplicationsScreenState extends ConsumerState<ApplicationsScreen> {
                                 // Organisation
                                 Text(
                                   item.examination.organisation,
-                                  style: AppTypography.caption.copyWith(
-                                    color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
-                                  ),
+                                  style: AppTypography.caption.copyWith(color: AppColors.textMuted),
                                 ),
                                 const SizedBox(height: AppDimensions.space12),
 
-                                // Application number or dates if present
+                                // Application number or notes if present
                                 if (item.applicationNumber != null && item.applicationNumber!.isNotEmpty) ...[
                                   Container(
                                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                     decoration: BoxDecoration(
-                                      color: isDark ? AppColors.darkSecondaryBackground : AppColors.lightSecondaryBackground,
-                                      borderRadius: AppDimensions.roundedSmall,
+                                      color: AppColors.secondarySurface,
+                                      borderRadius: BorderRadius.circular(AppDimensions.radiusSmall),
+                                      border: Border.all(color: AppColors.border),
                                     ),
-                                    child: Text(
-                                      'Reg / Roll No: ${item.applicationNumber}',
-                                      style: const TextStyle(fontSize: 11, fontFamily: 'monospace'),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        const Icon(LucideIcons.hash, size: 12, color: AppColors.textMuted),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          'Reg / Roll No: ${item.applicationNumber}',
+                                          style: const TextStyle(
+                                            fontSize: 11,
+                                            fontFamily: 'monospace',
+                                            color: AppColors.textMain,
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ),
                                   const SizedBox(height: AppDimensions.space8),
@@ -297,7 +381,7 @@ class _ApplicationsScreenState extends ConsumerState<ApplicationsScreen> {
                                   Text(
                                     item.personalNotes!,
                                     style: AppTypography.caption.copyWith(
-                                      color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
+                                      color: AppColors.textMuted,
                                       fontStyle: FontStyle.italic,
                                     ),
                                   ),
@@ -309,14 +393,24 @@ class _ApplicationsScreenState extends ConsumerState<ApplicationsScreen> {
                                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                   children: [
                                     Text(
-                                      'Last updated: ${DateFormat('d MMM yyyy').format(item.lastUpdated)}',
-                                      style: AppTypography.caption.copyWith(fontSize: 10),
+                                      'Updated ${DateFormat('d MMM yyyy').format(item.lastUpdated)}',
+                                      style: AppTypography.caption.copyWith(fontSize: 10, color: AppColors.textSubtle),
                                     ),
                                     InkWell(
-                                      onTap: () => context.go('/opportunities/${item.examinationId}'),
-                                      child: const Text(
-                                        'View Exam →',
-                                        style: TextStyle(color: AppColors.primaryBlue, fontSize: 11, fontWeight: FontWeight.bold),
+                                      onTap: () => context.push('/opportunities/${item.examinationId}'),
+                                      child: Row(
+                                        children: [
+                                          const Text(
+                                            'View Details',
+                                            style: TextStyle(
+                                              color: AppColors.primaryGreen,
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 2),
+                                          const Icon(LucideIcons.arrowRight, size: 12, color: AppColors.primaryGreen),
+                                        ],
                                       ),
                                     ),
                                   ],

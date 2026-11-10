@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
+
 import 'package:rexam/core/constants/app_colors.dart';
 import 'package:rexam/core/constants/app_dimensions.dart';
 import 'package:rexam/core/theme/app_typography.dart';
@@ -23,15 +25,15 @@ class _AlertsScreenState extends ConsumerState<AlertsScreen> {
     switch (type) {
       case AlertType.upcomingDeadline:
       case AlertType.deadlineChange:
-        return Icons.timer_outlined;
+        return LucideIcons.clock;
       case AlertType.corrigendum:
-        return Icons.edit_notifications_outlined;
+        return LucideIcons.alertTriangle;
       case AlertType.admitCard:
-        return Icons.badge_outlined;
+        return LucideIcons.fileCheck;
       case AlertType.result:
-        return Icons.emoji_events_outlined;
+        return LucideIcons.award;
       default:
-        return Icons.campaign_outlined;
+        return LucideIcons.bell;
     }
   }
 
@@ -41,20 +43,18 @@ class _AlertsScreenState extends ConsumerState<AlertsScreen> {
       case AlertType.deadlineChange:
         return AppColors.warning;
       case AlertType.corrigendum:
-        return Colors.orange;
+        return const Color(0xFFF97316); // Orange
       case AlertType.admitCard:
-        return AppColors.primaryBlue;
+        return const Color(0xFF60A5FA); // Sky blue
       case AlertType.result:
-        return AppColors.success;
+        return AppColors.primaryGreen;
       default:
-        return AppColors.primaryBlue;
+        return AppColors.primaryGreen;
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
     final allAlerts = ref.watch(alertsProvider);
 
     final filtered = allAlerts.where((a) {
@@ -62,15 +62,44 @@ class _AlertsScreenState extends ConsumerState<AlertsScreen> {
       return a.type == _selectedType;
     }).toList();
 
-    return Scaffold(
-      backgroundColor: theme.scaffoldBackgroundColor,
-      appBar: AppBar(
-        title: const Text('Notifications & Alerts'),
+    return PopScope(
+      canPop: true,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        if (context.canPop()) {
+          context.pop();
+        } else {
+          context.go('/discover');
+        }
+      },
+      child: Scaffold(
+        backgroundColor: AppColors.background,
+        appBar: AppBar(
+          backgroundColor: AppColors.background,
+          elevation: 0,
+          leading: IconButton(
+            icon: const Icon(LucideIcons.arrowLeft, size: 20),
+            onPressed: () {
+              if (context.canPop()) {
+                context.pop();
+              } else {
+                context.go('/discover');
+              }
+            },
+          ),
+          title: Text(
+            'Notifications & Alerts',
+            style: AppTypography.screenTitle.copyWith(fontSize: 18),
+          ),
         actions: [
           if (allAlerts.any((a) => !a.isRead))
-            TextButton(
+            TextButton.icon(
               onPressed: () => ref.read(alertsProvider.notifier).markAllAsRead(),
-              child: const Text('Mark All Read'),
+              icon: const Icon(LucideIcons.checkCheck, size: 14, color: AppColors.primaryGreen),
+              label: const Text(
+                'Mark All Read',
+                style: TextStyle(color: AppColors.primaryGreen, fontSize: 12),
+              ),
             ),
         ],
       ),
@@ -80,12 +109,29 @@ class _AlertsScreenState extends ConsumerState<AlertsScreen> {
             // Filter Pills
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: AppDimensions.space16, vertical: AppDimensions.space8),
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppDimensions.space16,
+                vertical: AppDimensions.space8,
+              ),
               child: Row(
                 children: [
-                  ChoiceChip(
+                  FilterChip(
                     label: const Text('All Alerts'),
                     selected: _selectedType == null,
+                    showCheckmark: false,
+                    selectedColor: AppColors.primaryGreen,
+                    backgroundColor: AppColors.surface,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(AppDimensions.radiusSmall),
+                      side: BorderSide(
+                        color: _selectedType == null ? AppColors.primaryGreen : AppColors.border,
+                      ),
+                    ),
+                    labelStyle: TextStyle(
+                      color: _selectedType == null ? AppColors.background : AppColors.textMain,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 12,
+                    ),
                     onSelected: (_) => setState(() => _selectedType = null),
                   ),
                   const SizedBox(width: AppDimensions.space8),
@@ -93,9 +139,23 @@ class _AlertsScreenState extends ConsumerState<AlertsScreen> {
                     final isSelected = _selectedType == type;
                     return Padding(
                       padding: const EdgeInsets.only(right: AppDimensions.space8),
-                      child: ChoiceChip(
+                      child: FilterChip(
                         label: Text(type.label),
                         selected: isSelected,
+                        showCheckmark: false,
+                        selectedColor: AppColors.primaryGreen,
+                        backgroundColor: AppColors.surface,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(AppDimensions.radiusSmall),
+                          side: BorderSide(
+                            color: isSelected ? AppColors.primaryGreen : AppColors.border,
+                          ),
+                        ),
+                        labelStyle: TextStyle(
+                          color: isSelected ? AppColors.background : AppColors.textMain,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 12,
+                        ),
                         onSelected: (selected) {
                           setState(() => _selectedType = selected ? type : null);
                         },
@@ -105,12 +165,12 @@ class _AlertsScreenState extends ConsumerState<AlertsScreen> {
                 ],
               ),
             ),
-            Divider(color: theme.colorScheme.outline),
+            const Divider(color: AppColors.border, height: 1),
 
             // Content List
             Expanded(
               child: RefreshIndicator(
-                color: AppColors.primaryBlue,
+                color: AppColors.primaryGreen,
                 onRefresh: () async {
                   await ref.read(alertsProvider.notifier).loadAlerts();
                 },
@@ -120,7 +180,7 @@ class _AlertsScreenState extends ConsumerState<AlertsScreen> {
                         children: [
                           const SizedBox(height: 80),
                           EmptyStateView(
-                            icon: Icons.notifications_none_rounded,
+                            icon: LucideIcons.bell,
                             title: 'No Notifications',
                             description: _selectedType != null
                                 ? 'No alerts in category "${_selectedType!.label}".'
@@ -141,22 +201,20 @@ class _AlertsScreenState extends ConsumerState<AlertsScreen> {
                             onTap: () {
                               ref.read(alertsProvider.notifier).markAsRead(alert.id);
                               if (alert.opportunityId != null) {
-                                context.go('/opportunities/${alert.opportunityId}');
+                                context.push('/opportunities/${alert.opportunityId}');
                               }
                             },
-                            borderRadius: AppDimensions.roundedDefault,
+                            borderRadius: BorderRadius.circular(AppDimensions.radiusCard),
                             child: Container(
                               margin: const EdgeInsets.only(bottom: AppDimensions.space12),
                               padding: const EdgeInsets.all(AppDimensions.space16),
                               decoration: BoxDecoration(
-                                color: alert.isRead
-                                    ? theme.cardColor
-                                    : (isDark ? const Color(0xFF1E293B) : const Color(0xFFEFF6FF)),
-                                borderRadius: AppDimensions.roundedDefault,
+                                color: alert.isRead ? AppColors.surface : AppColors.secondarySurface,
+                                borderRadius: BorderRadius.circular(AppDimensions.radiusCard),
                                 border: Border.all(
                                   color: alert.isRead
-                                      ? theme.colorScheme.outline
-                                      : AppColors.primaryBlue.withValues(alpha: 0.4),
+                                      ? AppColors.border
+                                      : AppColors.primaryGreen.withValues(alpha: 0.4),
                                   width: alert.isRead ? 1.0 : 1.5,
                                 ),
                               ),
@@ -167,10 +225,10 @@ class _AlertsScreenState extends ConsumerState<AlertsScreen> {
                                   Container(
                                     padding: const EdgeInsets.all(8),
                                     decoration: BoxDecoration(
-                                      color: color.withValues(alpha: 0.15),
-                                      shape: BoxShape.circle,
+                                      color: color.withValues(alpha: 0.12),
+                                      borderRadius: BorderRadius.circular(AppDimensions.radiusSmall),
                                     ),
-                                    child: Icon(icon, size: 20, color: color),
+                                    child: Icon(icon, size: 18, color: color),
                                   ),
                                   const SizedBox(width: AppDimensions.space12),
 
@@ -192,7 +250,10 @@ class _AlertsScreenState extends ConsumerState<AlertsScreen> {
                                             ),
                                             Text(
                                               DateFormat('d MMM, HH:mm').format(alert.timestamp),
-                                              style: AppTypography.caption.copyWith(fontSize: 10),
+                                              style: AppTypography.caption.copyWith(
+                                                fontSize: 10,
+                                                color: AppColors.textSubtle,
+                                              ),
                                             ),
                                           ],
                                         ),
@@ -204,7 +265,7 @@ class _AlertsScreenState extends ConsumerState<AlertsScreen> {
                                           style: TextStyle(
                                             fontSize: 14,
                                             fontWeight: alert.isRead ? FontWeight.w600 : FontWeight.bold,
-                                            color: theme.colorScheme.onSurface,
+                                            color: AppColors.textMain,
                                           ),
                                         ),
                                         const SizedBox(height: 4),
@@ -214,19 +275,25 @@ class _AlertsScreenState extends ConsumerState<AlertsScreen> {
                                           alert.message,
                                           style: AppTypography.caption.copyWith(
                                             height: 1.4,
-                                            color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
+                                            color: AppColors.textMuted,
                                           ),
                                         ),
 
                                         if (alert.opportunityId != null) ...[
                                           const SizedBox(height: 8),
-                                          const Text(
-                                            'View Details →',
-                                            style: TextStyle(
-                                              fontSize: 11,
-                                              color: AppColors.primaryBlue,
-                                              fontWeight: FontWeight.bold,
-                                            ),
+                                          const Row(
+                                            children: [
+                                              Text(
+                                                'View Examination',
+                                                style: TextStyle(
+                                                  fontSize: 11,
+                                                  color: AppColors.primaryGreen,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                              SizedBox(width: 4),
+                                              Icon(LucideIcons.arrowRight, size: 12, color: AppColors.primaryGreen),
+                                            ],
                                           ),
                                         ],
                                       ],
@@ -243,6 +310,7 @@ class _AlertsScreenState extends ConsumerState<AlertsScreen> {
           ],
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 }
