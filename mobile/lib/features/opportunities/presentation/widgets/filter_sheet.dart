@@ -8,7 +8,14 @@ import '../../domain/opportunity_filter.dart';
 import '../providers/opportunities_provider.dart';
 
 class FilterSheet extends ConsumerStatefulWidget {
-  const FilterSheet({super.key});
+  final OpportunityFilter? currentFilter;
+  final ValueChanged<OpportunityFilter>? onApply;
+
+  const FilterSheet({
+    super.key,
+    this.currentFilter,
+    this.onApply,
+  });
 
   @override
   ConsumerState<FilterSheet> createState() => _FilterSheetState();
@@ -55,7 +62,7 @@ class _FilterSheetState extends ConsumerState<FilterSheet> {
   @override
   void initState() {
     super.initState();
-    final current = ref.read(opportunityFilterProvider);
+    final current = widget.currentFilter ?? ref.read(opportunityFilterProvider);
     _sortOption = current.sortOption;
     _orgController = TextEditingController(text: current.organisation ?? '');
     _selectedCategory = current.category;
@@ -85,28 +92,41 @@ class _FilterSheetState extends ConsumerState<FilterSheet> {
       _eligibilityStatusFilter = null;
       _applicationStatus = null;
     });
-    ref.read(opportunityFilterProvider.notifier).state = const OpportunityFilter();
+    if (widget.onApply != null) {
+      widget.onApply!(const OpportunityFilter());
+    } else {
+      ref.read(opportunityFilterProvider.notifier).state = const OpportunityFilter();
+    }
   }
 
   void _apply() {
-    ref.read(opportunityFilterProvider.notifier).state = ref.read(opportunityFilterProvider).copyWith(
-          sortOption: _sortOption,
-          organisation: _orgController.text.trim().isEmpty ? null : _orgController.text.trim(),
-          category: _selectedCategory,
-          clearCategory: _selectedCategory == null,
-          clearOrganisation: _orgController.text.trim().isEmpty,
-          state: _state,
-          clearState: _state == null,
-          isCentralGovernment: _isCentralGovt,
-          clearJurisdiction: _isCentralGovt == null,
-          closingSoonOnly: _closingSoonOnly,
-          educationLevel: _educationLevel,
-          clearEducationLevel: _educationLevel == null,
-          eligibilityStatusFilter: _eligibilityStatusFilter,
-          clearEligibilityStatus: _eligibilityStatusFilter == null,
-          applicationStatus: _applicationStatus,
-          clearApplicationStatus: _applicationStatus == null,
-        );
+    final baseFilter = widget.currentFilter ?? ref.read(opportunityFilterProvider);
+    final updated = baseFilter.copyWith(
+      sortOption: _sortOption,
+      organisation: _orgController.text.trim().isEmpty ? null : _orgController.text.trim(),
+      category: _selectedCategory,
+      clearCategory: _selectedCategory == null,
+      clearOrganisation: _orgController.text.trim().isEmpty,
+      state: _state,
+      clearState: _state == null,
+      isCentralGovernment: _isCentralGovt,
+      clearJurisdiction: _isCentralGovt == null,
+      clearGovtType: _isCentralGovt == null,
+      closingSoonOnly: _closingSoonOnly,
+      educationLevel: _educationLevel,
+      clearEducationLevel: _educationLevel == null,
+      eligibilityStatusFilter: _eligibilityStatusFilter,
+      clearEligibilityStatus: _eligibilityStatusFilter == null,
+      clearEligibilityStatusFilter: _eligibilityStatusFilter == null,
+      applicationStatus: _applicationStatus,
+      clearApplicationStatus: _applicationStatus == null,
+    );
+
+    if (widget.onApply != null) {
+      widget.onApply!(updated);
+    } else {
+      ref.read(opportunityFilterProvider.notifier).state = updated;
+    }
     Navigator.of(context).pop();
   }
 

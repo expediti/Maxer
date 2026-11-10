@@ -114,7 +114,9 @@ class EligibilityReportScreen extends ConsumerWidget {
                         const SizedBox(height: AppDimensions.space12),
 
                         // Prominent Incomplete Information Banner if unconfirmed or incomplete
-                        if (report.overallStatus == OpportunityStatus.unconfirmed ||
+                        if (report.overallStatus == EligibilityStatus.unconfirmed ||
+                            report.overallStatus == EligibilityStatus.missingInformation ||
+                            report.overallStatus == EligibilityStatus.needsVerification ||
                             report.criteriaResults.isEmpty ||
                             report.criteriaResults.any((c) => c.status == RuleCheckStatus.needsConfirmation)) ...[
                           Container(

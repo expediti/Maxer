@@ -8,6 +8,8 @@ enum OpportunitySortOption {
   relevance('Relevance'),
   feeLowToHigh('Fee: Low to High');
 
+  static const OpportunitySortOption closingDateAsc = OpportunitySortOption.deadline;
+
   final String label;
   const OpportunitySortOption(this.label);
 }
@@ -66,18 +68,20 @@ class OpportunityFilter {
     bool clearCategory = false,
     bool clearOrganisation = false,
     bool clearGovtType = false,
+    bool clearJurisdiction = false,
     bool clearState = false,
     bool clearQualification = false,
     bool clearEducationLevel = false,
     bool clearStream = false,
     bool clearApplicationStatus = false,
     bool clearEligibilityStatusFilter = false,
+    bool clearEligibilityStatus = false,
   }) {
     return OpportunityFilter(
       searchQuery: searchQuery ?? this.searchQuery,
       category: clearCategory ? null : (category ?? this.category),
       organisation: clearOrganisation ? null : (organisation ?? this.organisation),
-      isCentralGovernment: clearGovtType ? null : (isCentralGovernment ?? this.isCentralGovernment),
+      isCentralGovernment: (clearGovtType || clearJurisdiction) ? null : (isCentralGovernment ?? this.isCentralGovernment),
       state: clearState ? null : (state ?? this.state),
       qualification: clearQualification ? null : (qualification ?? this.qualification),
       educationLevel: clearEducationLevel ? null : (educationLevel ?? this.educationLevel),
@@ -87,7 +91,7 @@ class OpportunityFilter {
       closingSoonOnly: closingSoonOnly ?? this.closingSoonOnly,
       eligibleOnly: eligibleOnly ?? this.eligibleOnly,
       applicationStatus: clearApplicationStatus ? null : (applicationStatus ?? this.applicationStatus),
-      eligibilityStatusFilter: clearEligibilityStatusFilter ? null : (eligibilityStatusFilter ?? this.eligibilityStatusFilter),
+      eligibilityStatusFilter: (clearEligibilityStatusFilter || clearEligibilityStatus) ? null : (eligibilityStatusFilter ?? this.eligibilityStatusFilter),
       sortOption: sortOption ?? this.sortOption,
     );
   }

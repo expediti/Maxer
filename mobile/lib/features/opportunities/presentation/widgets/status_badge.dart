@@ -36,6 +36,7 @@ class StatusBadge extends StatelessWidget {
         break;
       case EligibilityStatus.missingInformation:
       case EligibilityStatus.needsVerification:
+      case EligibilityStatus.unconfirmed:
         dotColor = AppColors.pending; // #EAB308
         label = 'Info Incomplete';
         break;

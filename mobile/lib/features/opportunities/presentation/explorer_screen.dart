@@ -432,7 +432,8 @@ class _ExplorerScreenState extends ConsumerState<ExplorerScreen> {
           return rep.overallStatus == EligibilityStatus.eligible;
         } else if (reqStatus == 'needs_verification') {
           return rep.overallStatus == EligibilityStatus.missingInformation ||
-              rep.overallStatus == EligibilityStatus.needsVerification;
+              rep.overallStatus == EligibilityStatus.needsVerification ||
+              rep.overallStatus == EligibilityStatus.unconfirmed;
         } else if (reqStatus == 'ineligible') {
           return rep.overallStatus == EligibilityStatus.notEligible;
         }
@@ -535,7 +536,8 @@ class _ExplorerScreenState extends ConsumerState<ExplorerScreen> {
       if (report.overallStatus == EligibilityStatus.eligible) {
         confirmedEligible[opp] = report;
       } else if (report.overallStatus == EligibilityStatus.missingInformation ||
-          report.overallStatus == EligibilityStatus.needsVerification) {
+          report.overallStatus == EligibilityStatus.needsVerification ||
+          report.overallStatus == EligibilityStatus.unconfirmed) {
         requiresVerification[opp] = report;
       }
     }

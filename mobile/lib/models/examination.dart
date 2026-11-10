@@ -88,7 +88,8 @@ enum EligibilityStatus {
   potentiallyEligible('Potentially Eligible'),
   notEligible('Not Eligible'),
   missingInformation('Review Needed'),
-  needsVerification('Needs Verification');
+  needsVerification('Needs Verification'),
+  unconfirmed('Unconfirmed');
 
   final String label;
   const EligibilityStatus(this.label);

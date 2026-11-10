@@ -17,6 +17,10 @@ class ApplicationsNotifier extends StateNotifier<List<ApplicationTrackerItem>> {
   }
 
   Future<void> loadApplications() async {
+    if (candidateId.isEmpty) {
+      state = [];
+      return;
+    }
     try {
       final list = await applicationRepo.getApplications(candidateId);
       state = list;
@@ -26,7 +30,10 @@ class ApplicationsNotifier extends StateNotifier<List<ApplicationTrackerItem>> {
   ApplicationTrackerItem? getByOpportunityId(String opportunityId) {
     try {
       return state.firstWhere(
-        (item) => item.examinationId == opportunityId || item.examination.id == opportunityId || item.examination.slug == opportunityId,
+        (item) =>
+            item.examinationId == opportunityId ||
+            item.examination.id == opportunityId ||
+            item.examination.slug == opportunityId,
       );
     } catch (_) {
       return null;
@@ -86,19 +93,70 @@ class ApplicationsNotifier extends StateNotifier<List<ApplicationTrackerItem>> {
     }
   }
 
-  Future<void> updateStatus(String trackerId, ApplicationStatus newStatus) async {
-    state = state.map((item) {
-      if (item.id == trackerId) {
-        return item.copyWith(status: newStatus, lastUpdated: DateTime.now());
-      }
-      return item;
-    }).toList();
+  Future<void> updateStatus({
+    required String examinationId,
+    required ApplicationStatus status,
+    String? applicationNumber,
+    String? notes,
+    DateTime? examDate,
+  }) async {
+    final existingIndex = state.indexWhere(
+      (item) => item.examinationId == examinationId || item.id == examinationId,
+    );
 
-    await applicationRepo.updateApplicationStatus(trackerId, newStatus);
+    if (existingIndex >= 0) {
+      final existing = state[existingIndex];
+      final updated = existing.copyWith(
+        status: status,
+        applicationNumber: applicationNumber ?? existing.applicationNumber,
+        personalNotes: notes ?? existing.personalNotes,
+        examDate: examDate ?? existing.examDate,
+        lastUpdated: DateTime.now(),
+      );
+      final list = [...state];
+      list[existingIndex] = updated;
+      state = list;
+
+      await applicationRepo.updateApplicationStatus(existing.id, status);
+      if (notes != null) {
+        await applicationRepo.updateApplicationNotes(existing.id, notes);
+      }
+    } else {
+      await applicationRepo.createApplication(
+        candidateId: candidateId,
+        examinationId: examinationId,
+        status: status,
+        applicationNumber: applicationNumber,
+        personalNotes: notes,
+      );
+      await loadApplications();
+    }
   }
 
-  Future<void> remove(String trackerId) async {
-    state = state.where((item) => item.id != trackerId).toList();
+  Future<void> remove(String idOrExamId) async {
+    final item = state.firstWhere(
+      (item) => item.examinationId == idOrExamId || item.id == idOrExamId,
+      orElse: () => ApplicationTrackerItem(
+        id: idOrExamId,
+        examinationId: idOrExamId,
+        examination: state.isNotEmpty ? state.first.examination : null as dynamic,
+        status: ApplicationStatus.interested,
+        appliedDate: DateTime.now(),
+        lastUpdated: DateTime.now(),
+      ),
+    );
+
+    state = state.where((i) => i.examinationId != idOrExamId && i.id != idOrExamId).toList();
+
+    if (item.id.isNotEmpty && !item.id.startsWith('app-tracker-')) {
+      await applicationRepo.deleteApplication(item.id);
+    }
+    if (candidateId.isNotEmpty) {
+      await applicationRepo.deleteApplicationByExamId(
+        candidateId: candidateId,
+        examinationId: item.examinationId.isNotEmpty ? item.examinationId : idOrExamId,
+      );
+    }
   }
 }
 

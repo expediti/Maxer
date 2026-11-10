@@ -16,6 +16,8 @@ abstract class ApplicationRepository {
   });
   Future<void> updateApplicationNotes(String applicationId, String notes);
   Future<void> toggleChecklistItem(String applicationId, String item);
+  Future<void> deleteApplication(String applicationId);
+  Future<void> deleteApplicationByExamId({required String candidateId, required String examinationId});
 }
 
 class SupabaseApplicationRepository implements ApplicationRepository {
@@ -166,6 +168,34 @@ class SupabaseApplicationRepository implements ApplicationRepository {
       }).eq('id', applicationId);
     } catch (e) {
       debugPrint('[REXAM] Toggle checklist error: $e');
+    }
+  }
+
+  @override
+  Future<void> deleteApplication(String applicationId) async {
+    final client = SupabaseConfig.client;
+    if (client == null || applicationId.trim().isEmpty) return;
+
+    try {
+      await client.from('candidate_applications').delete().eq('id', applicationId);
+    } catch (e) {
+      debugPrint('[REXAM] Delete application error: $e');
+    }
+  }
+
+  @override
+  Future<void> deleteApplicationByExamId({required String candidateId, required String examinationId}) async {
+    final client = SupabaseConfig.client;
+    if (client == null || candidateId.trim().isEmpty || examinationId.trim().isEmpty) return;
+
+    try {
+      await client
+          .from('candidate_applications')
+          .delete()
+          .eq('candidate_id', candidateId)
+          .eq('examination_id', examinationId);
+    } catch (e) {
+      debugPrint('[REXAM] Delete application by examId error: $e');
     }
   }
 }

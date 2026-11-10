@@ -17,8 +17,11 @@ enum ApplicationStatus {
   const ApplicationStatus(this.label);
 
   static ApplicationStatus fromString(String val) {
+    final clean = val.toLowerCase().replaceAll('_', '').replaceAll(' ', '');
     for (final s in ApplicationStatus.values) {
-      if (s.label.toLowerCase() == val.toLowerCase() || s.name.toLowerCase() == val.toLowerCase()) {
+      final sCleanLabel = s.label.toLowerCase().replaceAll(' ', '');
+      final sCleanName = s.name.toLowerCase();
+      if (sCleanLabel == clean || sCleanName == clean) {
         return s;
       }
     }

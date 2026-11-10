@@ -1024,6 +1024,7 @@ class OpportunityDetailsScreen extends ConsumerWidget {
           break;
         case EligibilityStatus.missingInformation:
         case EligibilityStatus.needsVerification:
+        case EligibilityStatus.unconfirmed:
           dotColor = AppColors.pending;
           statusTitle = 'Eligibility Information Incomplete';
           statusSummary = 'Eligibility cannot be confirmed because official information is incomplete.';

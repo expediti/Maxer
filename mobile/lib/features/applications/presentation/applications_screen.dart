@@ -9,7 +9,7 @@ import '../../../core/constants/app_dimensions.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../../models/application_tracker.dart';
-import '../providers/applications_provider.dart';
+import 'providers/applications_provider.dart';
 
 class ApplicationsScreen extends ConsumerStatefulWidget {
   const ApplicationsScreen({super.key});
@@ -25,18 +25,24 @@ class _ApplicationsScreenState extends ConsumerState<ApplicationsScreen> {
     switch (status) {
       case ApplicationStatus.interested:
         return AppColors.pending;
+      case ApplicationStatus.preparingDocuments:
+        return AppColors.warning;
+      case ApplicationStatus.readyToApply:
+        return AppColors.info;
       case ApplicationStatus.applied:
         return AppColors.info;
-      case ApplicationStatus.admitCardDownloaded:
+      case ApplicationStatus.admitCardReleased:
+        return const Color(0xFF60A5FA);
+      case ApplicationStatus.examCompleted:
         return AppColors.primaryGreen;
-      case ApplicationStatus.examAppeared:
-        return AppColors.primaryGreen;
-      case ApplicationStatus.resultAwaited:
+      case ApplicationStatus.resultDeclared:
         return AppColors.warning;
-      case ApplicationStatus.qualified:
+      case ApplicationStatus.selected:
         return AppColors.primaryGreen;
-      case ApplicationStatus.notQualified:
+      case ApplicationStatus.rejected:
         return AppColors.error;
+      case ApplicationStatus.withdrawn:
+        return AppColors.textSubtle;
     }
   }
 
