@@ -30,6 +30,7 @@ class ExplorerScreen extends ConsumerStatefulWidget {
 
 class _ExplorerScreenState extends ConsumerState<ExplorerScreen> {
   final TextEditingController _searchController = TextEditingController();
+  final ScrollController _scrollController = ScrollController();
   late int _selectedSectionIndex; // 0: All Examinations, 1: Eligible for Me
   bool _showVerificationExams = false;
 
@@ -39,10 +40,20 @@ class _ExplorerScreenState extends ConsumerState<ExplorerScreen> {
     _selectedSectionIndex = widget.initialSection;
     final filter = ref.read(opportunityFilterProvider);
     _searchController.text = filter.searchQuery;
+    _scrollController.addListener(_onScroll);
+  }
+
+  void _onScroll() {
+    if (_scrollController.hasClients &&
+        _scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 300) {
+      ref.read(paginatedOpportunitiesProvider.notifier).loadNextPage();
+    }
   }
 
   @override
   void dispose() {
+    _scrollController.removeListener(_onScroll);
+    _scrollController.dispose();
     _searchController.dispose();
     super.dispose();
   }
@@ -65,20 +76,20 @@ class _ExplorerScreenState extends ConsumerState<ExplorerScreen> {
   @override
   Widget build(BuildContext context) {
     final filter = ref.watch(opportunityFilterProvider);
-    final opportunitiesAsync = ref.watch(filteredOpportunitiesProvider);
+    final paginated = ref.watch(paginatedOpportunitiesProvider);
     final profileAsync = ref.watch(profileProvider);
     final CandidateProfile? candidate = profileAsync.valueOrNull;
 
     return Scaffold(
-      backgroundColor: AppColors.mainBackground,
+      backgroundColor: context.themeBackground,
       appBar: AppBar(
-        backgroundColor: AppColors.mainBackground,
-        title: const Text('Examinations & Discoveries'),
+        backgroundColor: context.themeBackground,
+        title: Text('Examinations & Discoveries', style: TextStyle(color: context.themeTextMain)),
         actions: [
           IconButton(
             icon: Stack(
               children: [
-                const Icon(LucideIcons.slidersHorizontal, size: 20, color: AppColors.primaryText),
+                Icon(LucideIcons.slidersHorizontal, size: 20, color: context.themeTextMain),
                 if (filter.hasActiveFilters)
                   Positioned(
                     right: 0,
@@ -86,8 +97,8 @@ class _ExplorerScreenState extends ConsumerState<ExplorerScreen> {
                     child: Container(
                       width: 8,
                       height: 8,
-                      decoration: const BoxDecoration(
-                        color: AppColors.white,
+                      decoration: BoxDecoration(
+                        color: context.isDarkMode ? AppColors.white : AppColors.black,
                         shape: BoxShape.circle,
                       ),
                     ),
@@ -111,9 +122,9 @@ class _ExplorerScreenState extends ConsumerState<ExplorerScreen> {
               child: Container(
                 padding: const EdgeInsets.all(3),
                 decoration: BoxDecoration(
-                  color: AppColors.elevatedSurface,
+                  color: context.themeSurfaceElevated,
                   borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
-                  border: Border.all(color: AppColors.border),
+                  border: Border.all(color: context.themeBorder),
                 ),
                 child: Row(
                   children: [
@@ -145,7 +156,7 @@ class _ExplorerScreenState extends ConsumerState<ExplorerScreen> {
               child: TextField(
                 controller: _searchController,
                 textInputAction: TextInputAction.search,
-                style: const TextStyle(color: AppColors.primaryText),
+                style: TextStyle(color: context.themeTextMain),
                 onChanged: (val) {
                   ref.read(opportunityFilterProvider.notifier).state =
                       filter.copyWith(searchQuery: val);
@@ -154,10 +165,10 @@ class _ExplorerScreenState extends ConsumerState<ExplorerScreen> {
                   hintText: _selectedSectionIndex == 0
                       ? 'Search all published exams, PSUs, scholarships...'
                       : 'Search eligible examinations...',
-                  prefixIcon: const Icon(LucideIcons.search, size: 18, color: AppColors.secondaryText),
+                  prefixIcon: Icon(LucideIcons.search, size: 18, color: context.themeTextMuted),
                   suffixIcon: _searchController.text.isNotEmpty
                       ? IconButton(
-                          icon: const Icon(LucideIcons.x, size: 16, color: AppColors.secondaryText),
+                          icon: Icon(LucideIcons.x, size: 16, color: context.themeTextMuted),
                           onPressed: () {
                             _searchController.clear();
                             ref.read(opportunityFilterProvider.notifier).state =
@@ -181,19 +192,19 @@ class _ExplorerScreenState extends ConsumerState<ExplorerScreen> {
                   ChoiceChip(
                     label: const Text('All'),
                     selected: filter.category == null && (filter.organisation == null || filter.organisation!.isEmpty),
-                    selectedColor: AppColors.white,
-                    backgroundColor: AppColors.cardBackground,
+                    selectedColor: context.isDarkMode ? AppColors.white : AppColors.black,
+                    backgroundColor: context.themeCard,
                     labelStyle: TextStyle(
                       color: filter.category == null && (filter.organisation == null || filter.organisation!.isEmpty)
-                          ? AppColors.black
-                          : AppColors.secondaryText,
+                          ? (context.isDarkMode ? AppColors.black : AppColors.white)
+                          : context.themeTextMuted,
                       fontWeight: FontWeight.w700,
                       fontSize: 12,
                     ),
                     side: BorderSide(
                       color: filter.category == null && (filter.organisation == null || filter.organisation!.isEmpty)
-                          ? AppColors.white
-                          : AppColors.border,
+                          ? (context.isDarkMode ? AppColors.white : AppColors.black)
+                          : context.themeBorder,
                     ),
                     showCheckmark: false,
                     onSelected: (selected) {
@@ -223,14 +234,20 @@ class _ExplorerScreenState extends ConsumerState<ExplorerScreen> {
                       child: ChoiceChip(
                         label: Text(filterName),
                         selected: isSelected,
-                        selectedColor: AppColors.white,
-                        backgroundColor: AppColors.cardBackground,
+                        selectedColor: context.isDarkMode ? AppColors.white : AppColors.black,
+                        backgroundColor: context.themeCard,
                         labelStyle: TextStyle(
-                          color: isSelected ? AppColors.black : AppColors.secondaryText,
+                          color: isSelected
+                              ? (context.isDarkMode ? AppColors.black : AppColors.white)
+                              : context.themeTextMuted,
                           fontWeight: FontWeight.w700,
                           fontSize: 12,
                         ),
-                        side: BorderSide(color: isSelected ? AppColors.white : AppColors.border),
+                        side: BorderSide(
+                          color: isSelected
+                              ? (context.isDarkMode ? AppColors.white : AppColors.black)
+                              : context.themeBorder,
+                        ),
                         showCheckmark: false,
                         onSelected: (selected) {
                           if (isScholarshipChip) {
@@ -258,14 +275,20 @@ class _ExplorerScreenState extends ConsumerState<ExplorerScreen> {
                       child: ChoiceChip(
                         label: Text(cat.label),
                         selected: isSelected,
-                        selectedColor: AppColors.white,
-                        backgroundColor: AppColors.cardBackground,
+                        selectedColor: context.isDarkMode ? AppColors.white : AppColors.black,
+                        backgroundColor: context.themeCard,
                         labelStyle: TextStyle(
-                          color: isSelected ? AppColors.black : AppColors.secondaryText,
+                          color: isSelected
+                              ? (context.isDarkMode ? AppColors.black : AppColors.white)
+                              : context.themeTextMuted,
                           fontWeight: FontWeight.w700,
                           fontSize: 12,
                         ),
-                        side: BorderSide(color: isSelected ? AppColors.white : AppColors.border),
+                        side: BorderSide(
+                          color: isSelected
+                              ? (context.isDarkMode ? AppColors.white : AppColors.black)
+                              : context.themeBorder,
+                        ),
                         showCheckmark: false,
                         onSelected: (selected) {
                           ref.read(opportunityFilterProvider.notifier).state = filter.copyWith(
@@ -287,45 +310,54 @@ class _ExplorerScreenState extends ConsumerState<ExplorerScreen> {
                 color: AppColors.white,
                 backgroundColor: AppColors.elevatedSurface,
                 onRefresh: () async {
-                  ref.invalidate(filteredOpportunitiesProvider);
+                  await ref.read(paginatedOpportunitiesProvider.notifier).refresh();
                 },
-                child: opportunitiesAsync.when(
-                  data: (opportunities) {
+                child: Builder(
+                  builder: (context) {
+                    if (paginated.isLoadingInitial) {
+                      return const Center(
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(AppColors.white),
+                        ),
+                      );
+                    }
+
+                    if (paginated.errorMessage != null && paginated.items.isEmpty) {
+                      return ListView(
+                        controller: _scrollController,
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        children: [
+                          const SizedBox(height: 60),
+                          EmptyStateView(
+                            icon: LucideIcons.wifiOff,
+                            title: 'Unable to Load Opportunities',
+                            description: paginated.errorMessage!,
+                            actionLabel: 'Retry',
+                            onAction: () => ref.read(paginatedOpportunitiesProvider.notifier).loadInitial(),
+                          ),
+                        ],
+                      );
+                    }
+
                     if (_selectedSectionIndex == 0) {
                       // Section A: All Examinations
                       return _buildAllExaminationsList(
-                        opportunities: opportunities,
+                        opportunities: paginated.items,
                         candidate: candidate,
                         filter: filter,
+                        isLoadingMore: paginated.isLoadingMore,
                       );
                     } else {
                       // Section B: Eligible for Me
                       return _buildEligibleForMeList(
-                        opportunities: opportunities,
+                        opportunities: paginated.items,
                         candidate: candidate,
                         filter: filter,
+                        isLoadingMore: paginated.isLoadingMore,
                       );
                     }
                   },
-                  loading: () => const Center(
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      valueColor: AlwaysStoppedAnimation<Color>(AppColors.white),
-                    ),
-                  ),
-                  error: (error, stack) => ListView(
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    children: [
-                      const SizedBox(height: 60),
-                      EmptyStateView(
-                        icon: LucideIcons.wifiOff,
-                        title: 'Unable to Load Opportunities',
-                        description: '$error',
-                        actionLabel: 'Retry',
-                        onAction: () => ref.invalidate(filteredOpportunitiesProvider),
-                      ),
-                    ],
-                  ),
                 ),
               ),
             ),
@@ -348,7 +380,9 @@ class _ExplorerScreenState extends ConsumerState<ExplorerScreen> {
         duration: const Duration(milliseconds: 150),
         padding: const EdgeInsets.symmetric(vertical: 9),
         decoration: BoxDecoration(
-          color: isSelected ? AppColors.white : Colors.transparent,
+          color: isSelected
+              ? (context.isDarkMode ? AppColors.white : AppColors.black)
+              : Colors.transparent,
           borderRadius: BorderRadius.circular(AppDimensions.radiusSmall),
         ),
         child: Row(
@@ -357,13 +391,17 @@ class _ExplorerScreenState extends ConsumerState<ExplorerScreen> {
             Icon(
               icon,
               size: 15,
-              color: isSelected ? AppColors.black : AppColors.secondaryText,
+              color: isSelected
+                  ? (context.isDarkMode ? AppColors.black : AppColors.white)
+                  : context.themeTextMuted,
             ),
             const SizedBox(width: 7),
             Text(
               title,
               style: TextStyle(
-                color: isSelected ? AppColors.black : AppColors.secondaryText,
+                color: isSelected
+                    ? (context.isDarkMode ? AppColors.black : AppColors.white)
+                    : context.themeTextMuted,
                 fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
                 fontSize: 13,
               ),
@@ -379,6 +417,7 @@ class _ExplorerScreenState extends ConsumerState<ExplorerScreen> {
     required List<Opportunity> opportunities,
     required CandidateProfile? candidate,
     required OpportunityFilter filter,
+    bool isLoadingMore = false,
   }) {
     // Post-filter by eligibility status if explicitly requested in filter sheet
     var list = opportunities;
@@ -403,6 +442,7 @@ class _ExplorerScreenState extends ConsumerState<ExplorerScreen> {
 
     if (list.isEmpty) {
       return ListView(
+        controller: _scrollController,
         physics: const AlwaysScrollableScrollPhysics(),
         children: [
           const SizedBox(height: 60),
@@ -423,13 +463,29 @@ class _ExplorerScreenState extends ConsumerState<ExplorerScreen> {
     }
 
     return ListView.builder(
+      controller: _scrollController,
       physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.symmetric(
         horizontal: AppDimensions.space16,
         vertical: AppDimensions.space8,
       ),
-      itemCount: list.length,
+      itemCount: list.length + (isLoadingMore ? 1 : 0),
       itemBuilder: (context, index) {
+        if (index == list.length) {
+          return const Padding(
+            padding: EdgeInsets.symmetric(vertical: AppDimensions.space20),
+            child: Center(
+              child: SizedBox(
+                width: 22,
+                height: 22,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(AppColors.white),
+                ),
+              ),
+            ),
+          );
+        }
         final opp = list[index];
         return Padding(
           padding: const EdgeInsets.only(bottom: AppDimensions.space12),
@@ -447,9 +503,11 @@ class _ExplorerScreenState extends ConsumerState<ExplorerScreen> {
     required List<Opportunity> opportunities,
     required CandidateProfile? candidate,
     required OpportunityFilter filter,
+    bool isLoadingMore = false,
   }) {
     if (candidate == null) {
       return ListView(
+        controller: _scrollController,
         physics: const AlwaysScrollableScrollPhysics(),
         children: [
           const SizedBox(height: 60),
@@ -486,6 +544,7 @@ class _ExplorerScreenState extends ConsumerState<ExplorerScreen> {
     final verificationList = requiresVerification.keys.toList();
 
     return ListView(
+      controller: _scrollController,
       physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.symmetric(
         horizontal: AppDimensions.space16,
@@ -497,9 +556,9 @@ class _ExplorerScreenState extends ConsumerState<ExplorerScreen> {
           Container(
             margin: const EdgeInsets.only(bottom: AppDimensions.space12),
             decoration: BoxDecoration(
-              color: AppColors.elevatedSurface,
+              color: context.themeSurfaceElevated,
               borderRadius: BorderRadius.circular(AppDimensions.radiusCard),
-              border: Border.all(color: AppColors.border),
+              border: Border.all(color: context.themeBorder),
             ),
             child: Column(
               children: [
@@ -525,17 +584,17 @@ class _ExplorerScreenState extends ConsumerState<ExplorerScreen> {
                             children: [
                               Text(
                                 '${verificationList.length} Examinations Require Verification',
-                                style: const TextStyle(
-                                  color: AppColors.primaryText,
+                                style: TextStyle(
+                                  color: context.themeTextMain,
                                   fontSize: 13,
                                   fontWeight: FontWeight.w600,
                                 ),
                               ),
                               const SizedBox(height: 2),
-                              const Text(
+                              Text(
                                 'Requires official university CGPA conversion certificate or specific documents.',
                                 style: TextStyle(
-                                  color: AppColors.secondaryText,
+                                  color: context.themeTextMuted,
                                   fontSize: 11.5,
                                 ),
                               ),
@@ -545,14 +604,14 @@ class _ExplorerScreenState extends ConsumerState<ExplorerScreen> {
                         Icon(
                           _showVerificationExams ? LucideIcons.chevronUp : LucideIcons.chevronDown,
                           size: 16,
-                          color: AppColors.secondaryText,
+                          color: context.themeTextMuted,
                         ),
                       ],
                     ),
                   ),
                 ),
                 if (_showVerificationExams) ...[
-                  const Divider(color: AppColors.divider, height: 1),
+                  Divider(color: context.themeBorder, height: 1),
                   Padding(
                     padding: const EdgeInsets.all(AppDimensions.space12),
                     child: Column(
@@ -606,17 +665,17 @@ class _ExplorerScreenState extends ConsumerState<ExplorerScreen> {
                     Text(
                       '${eligibleList.length} Confirmed Opportunities',
                       style: AppTypography.caption.copyWith(
-                        color: AppColors.primaryText,
+                        color: context.themeTextMain,
                         fontWeight: FontWeight.w700,
                         fontSize: 12.5,
                       ),
                     ),
                   ],
                 ),
-                const Text(
+                Text(
                   '100% Rules Satisfied',
                   style: TextStyle(
-                    color: AppColors.secondaryText,
+                    color: context.themeTextMuted,
                     fontSize: 11.5,
                     fontWeight: FontWeight.w500,
                   ),
@@ -635,6 +694,20 @@ class _ExplorerScreenState extends ConsumerState<ExplorerScreen> {
               ),
             );
           }),
+          if (isLoadingMore)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: AppDimensions.space20),
+              child: Center(
+                child: SizedBox(
+                  width: 22,
+                  height: 22,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    valueColor: AlwaysStoppedAnimation<Color>(AppColors.white),
+                  ),
+                ),
+              ),
+            ),
         ],
       ],
     );

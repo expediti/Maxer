@@ -4,7 +4,11 @@ import '../../profile/domain/candidate_profile.dart';
 import '../../../repositories/examination_repository.dart';
 
 abstract class OpportunityRepository {
-  Future<List<Opportunity>> getOpportunities({OpportunityFilter? filter});
+  Future<List<Opportunity>> getOpportunities({
+    OpportunityFilter? filter,
+    int page = 1,
+    int pageSize = 30,
+  });
   Future<Opportunity?> getOpportunityById(String id);
   Future<List<Opportunity>> getRecommendedOpportunities(CandidateProfile candidate);
   Future<List<Opportunity>> getClosingSoonOpportunities({int limit = 5});
@@ -15,12 +19,21 @@ class SupabaseOpportunityRepository implements OpportunityRepository {
   final ExaminationRepository _examRepo = SupabaseExaminationRepository();
 
   @override
-  Future<List<Opportunity>> getOpportunities({OpportunityFilter? filter}) async {
+  Future<List<Opportunity>> getOpportunities({
+    OpportunityFilter? filter,
+    int page = 1,
+    int pageSize = 30,
+  }) async {
     final list = await _examRepo.getExaminations(
       category: filter?.category,
       isCentralGovernment: filter?.isCentralGovernment,
       searchQuery: filter?.searchQuery,
-      limit: 100,
+      state: filter?.state,
+      qualification: filter?.educationLevel ?? filter?.qualification,
+      applicationStatus: filter?.applicationStatus,
+      organisation: filter?.organisation,
+      page: page,
+      limit: pageSize,
     );
 
     var filtered = list;

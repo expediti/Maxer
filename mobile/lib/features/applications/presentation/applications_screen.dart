@@ -9,7 +9,7 @@ import '../../../core/constants/app_dimensions.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../../models/application_tracker.dart';
-import 'providers/applications_provider.dart';
+import '../providers/applications_provider.dart';
 
 class ApplicationsScreen extends ConsumerStatefulWidget {
   const ApplicationsScreen({super.key});
@@ -24,41 +24,39 @@ class _ApplicationsScreenState extends ConsumerState<ApplicationsScreen> {
   Color _getStatusColor(ApplicationStatus status) {
     switch (status) {
       case ApplicationStatus.interested:
-        return AppColors.textMuted;
-      case ApplicationStatus.preparingDocuments:
-      case ApplicationStatus.readyToApply:
-        return AppColors.warning;
+        return AppColors.pending;
       case ApplicationStatus.applied:
+        return AppColors.info;
+      case ApplicationStatus.admitCardDownloaded:
         return AppColors.primaryGreen;
-      case ApplicationStatus.admitCardReleased:
-      case ApplicationStatus.examCompleted:
-        return const Color(0xFF60A5FA); // Info blue
-      case ApplicationStatus.resultDeclared:
-      case ApplicationStatus.selected:
+      case ApplicationStatus.examAppeared:
         return AppColors.primaryGreen;
-      case ApplicationStatus.rejected:
-      case ApplicationStatus.withdrawn:
+      case ApplicationStatus.resultAwaited:
+        return AppColors.warning;
+      case ApplicationStatus.qualified:
+        return AppColors.primaryGreen;
+      case ApplicationStatus.notQualified:
         return AppColors.error;
     }
   }
 
   void _showStatusDialog(BuildContext context, ApplicationTrackerItem item) {
     ApplicationStatus current = item.status;
-    final notesController = TextEditingController(text: item.personalNotes ?? '');
     final appNumController = TextEditingController(text: item.applicationNumber ?? '');
+    final notesController = TextEditingController(text: item.personalNotes ?? '');
 
     showDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) => AlertDialog(
-          backgroundColor: AppColors.surface,
+          backgroundColor: ctx.themeCard,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(AppDimensions.radiusCard),
-            side: const BorderSide(color: AppColors.border),
+            side: BorderSide(color: ctx.themeBorder),
           ),
           title: Text(
             'Update Application Stage',
-            style: AppTypography.screenTitle.copyWith(fontSize: 18),
+            style: AppTypography.screenTitle.copyWith(fontSize: 18, color: ctx.themeTextMain),
           ),
           content: SingleChildScrollView(
             child: Column(
@@ -67,7 +65,7 @@ class _ApplicationsScreenState extends ConsumerState<ApplicationsScreen> {
               children: [
                 DropdownButtonFormField<ApplicationStatus>(
                   initialValue: current,
-                  dropdownColor: AppColors.secondarySurface,
+                  dropdownColor: ctx.themeSurfaceElevated,
                   decoration: const InputDecoration(
                     labelText: 'Status Stage',
                     prefixIcon: Icon(LucideIcons.clipboardCheck, size: 18, color: AppColors.primaryGreen),
@@ -77,7 +75,7 @@ class _ApplicationsScreenState extends ConsumerState<ApplicationsScreen> {
                       value: s,
                       child: Text(
                         s.label,
-                        style: const TextStyle(fontSize: 13, color: AppColors.textMain),
+                        style: TextStyle(fontSize: 13, color: ctx.themeTextMain),
                       ),
                     );
                   }).toList(),
@@ -88,20 +86,20 @@ class _ApplicationsScreenState extends ConsumerState<ApplicationsScreen> {
                 const SizedBox(height: AppDimensions.space12),
                 TextField(
                   controller: appNumController,
-                  style: const TextStyle(color: AppColors.textMain, fontSize: 13),
-                  decoration: const InputDecoration(
+                  style: TextStyle(color: ctx.themeTextMain, fontSize: 13),
+                  decoration: InputDecoration(
                     labelText: 'Roll No / Registration ID',
-                    prefixIcon: Icon(LucideIcons.hash, size: 18, color: AppColors.textMuted),
+                    prefixIcon: Icon(LucideIcons.hash, size: 18, color: ctx.themeTextMuted),
                   ),
                 ),
                 const SizedBox(height: AppDimensions.space12),
                 TextField(
                   controller: notesController,
                   maxLines: 2,
-                  style: const TextStyle(color: AppColors.textMain, fontSize: 13),
-                  decoration: const InputDecoration(
+                  style: TextStyle(color: ctx.themeTextMain, fontSize: 13),
+                  decoration: InputDecoration(
                     labelText: 'Personal Notes & Checklist',
-                    prefixIcon: Icon(LucideIcons.fileText, size: 18, color: AppColors.textMuted),
+                    prefixIcon: Icon(LucideIcons.fileText, size: 18, color: ctx.themeTextMuted),
                   ),
                 ),
               ],
@@ -109,26 +107,27 @@ class _ApplicationsScreenState extends ConsumerState<ApplicationsScreen> {
           ),
           actions: [
             TextButton(
-              onPressed: () => _showConfirmDeleteDialog(context, item),
+              onPressed: () {
+                Navigator.of(ctx).pop();
+                _confirmDelete(context, item);
+              },
               child: const Text('Remove', style: TextStyle(color: AppColors.error)),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: Text('Cancel', style: TextStyle(color: ctx.themeTextMuted)),
             ),
             ElevatedButton(
               onPressed: () {
-                ref.read(applicationsProvider.notifier).addOrUpdate(
-                      opportunity: item.examination,
+                ref.read(applicationsProvider.notifier).updateStatus(
+                      examinationId: item.examinationId,
                       status: current,
                       applicationNumber: appNumController.text.trim().isEmpty ? null : appNumController.text.trim(),
                       notes: notesController.text.trim().isEmpty ? null : notesController.text.trim(),
                     );
                 Navigator.of(ctx).pop();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Stage updated: ${current.label}'),
-                    backgroundColor: AppColors.primaryGreen,
-                  ),
-                );
               },
-              child: const Text('Save'),
+              child: const Text('Update'),
             ),
           ],
         ),
@@ -136,33 +135,32 @@ class _ApplicationsScreenState extends ConsumerState<ApplicationsScreen> {
     );
   }
 
-  void _showConfirmDeleteDialog(BuildContext context, ApplicationTrackerItem item) {
+  void _confirmDelete(BuildContext context, ApplicationTrackerItem item) {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: AppColors.surface,
+        backgroundColor: ctx.themeCard,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppDimensions.radiusCard),
-          side: const BorderSide(color: AppColors.border),
+          side: BorderSide(color: ctx.themeBorder),
         ),
-        title: const Text('Remove from Tracker?'),
+        title: Text('Remove from Tracker?', style: TextStyle(color: ctx.themeTextMain)),
         content: Text(
-          'Are you sure you want to stop tracking "${item.examination.title}"?',
-          style: const TextStyle(color: AppColors.textMuted),
+          'Stop tracking "${item.examination.title}"? Your notes and registration ID will be removed.',
+          style: TextStyle(color: ctx.themeTextMuted),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Cancel', style: TextStyle(color: AppColors.textMuted)),
+            child: Text('Cancel', style: TextStyle(color: ctx.themeTextMuted)),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
             onPressed: () {
-              ref.read(applicationsProvider.notifier).remove(item.id);
-              Navigator.of(ctx).pop(); // Close confirm dialog
-              Navigator.of(context).pop(); // Close status dialog
+              ref.read(applicationsProvider.notifier).remove(item.examinationId);
+              Navigator.of(ctx).pop();
             },
-            child: const Text('Remove'),
+            child: const Text('Remove', style: TextStyle(color: Colors.white)),
           ),
         ],
       ),
@@ -171,21 +169,19 @@ class _ApplicationsScreenState extends ConsumerState<ApplicationsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final allTrackers = ref.watch(applicationsProvider);
-
-    final filtered = allTrackers.where((item) {
-      if (_filterStatus == null) return true;
-      return item.status == _filterStatus;
-    }).toList();
+    final applications = ref.watch(applicationsProvider);
+    final filtered = _filterStatus == null
+        ? applications
+        : applications.where((a) => a.status == _filterStatus).toList();
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: context.themeBackground,
       appBar: AppBar(
-        backgroundColor: AppColors.background,
+        backgroundColor: context.themeBackground,
         elevation: 0,
         title: Text(
           'Application Tracker',
-          style: AppTypography.screenTitle.copyWith(fontSize: 18),
+          style: AppTypography.screenTitle.copyWith(fontSize: 18, color: context.themeTextMain),
         ),
       ),
       body: SafeArea(
@@ -205,15 +201,15 @@ class _ApplicationsScreenState extends ConsumerState<ApplicationsScreen> {
                     selected: _filterStatus == null,
                     showCheckmark: false,
                     selectedColor: AppColors.primaryGreen,
-                    backgroundColor: AppColors.surface,
+                    backgroundColor: context.themeCard,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(AppDimensions.radiusSmall),
                       side: BorderSide(
-                        color: _filterStatus == null ? AppColors.primaryGreen : AppColors.border,
+                        color: _filterStatus == null ? AppColors.primaryGreen : context.themeBorder,
                       ),
                     ),
                     labelStyle: TextStyle(
-                      color: _filterStatus == null ? AppColors.background : AppColors.textMain,
+                      color: _filterStatus == null ? Colors.white : context.themeTextMain,
                       fontWeight: FontWeight.w600,
                       fontSize: 12,
                     ),
@@ -231,15 +227,15 @@ class _ApplicationsScreenState extends ConsumerState<ApplicationsScreen> {
                         selected: isSelected,
                         showCheckmark: false,
                         selectedColor: AppColors.primaryGreen,
-                        backgroundColor: AppColors.surface,
+                        backgroundColor: context.themeCard,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(AppDimensions.radiusSmall),
                           side: BorderSide(
-                            color: isSelected ? AppColors.primaryGreen : AppColors.border,
+                            color: isSelected ? AppColors.primaryGreen : context.themeBorder,
                           ),
                         ),
                         labelStyle: TextStyle(
-                          color: isSelected ? AppColors.background : AppColors.textMain,
+                          color: isSelected ? Colors.white : context.themeTextMain,
                           fontWeight: FontWeight.w600,
                           fontSize: 12,
                         ),
@@ -252,7 +248,7 @@ class _ApplicationsScreenState extends ConsumerState<ApplicationsScreen> {
                 ],
               ),
             ),
-            const Divider(color: AppColors.border, height: 1),
+            Divider(color: context.themeBorder, height: 1),
 
             // Content List
             Expanded(
@@ -267,12 +263,12 @@ class _ApplicationsScreenState extends ConsumerState<ApplicationsScreen> {
                         children: [
                           const SizedBox(height: 80),
                           EmptyStateView(
-                            icon: LucideIcons.clipboardCheck,
-                            title: 'No Tracked Applications',
+                            icon: LucideIcons.clipboardList,
+                            title: 'No Applications Tracked',
                             description: _filterStatus != null
-                                ? 'No applications currently in stage "${_filterStatus!.label}".'
-                                : 'Track examinations you intend to sit for to log your registration ID, exam dates, and milestone preparation notes.',
-                            actionLabel: 'Browse Examinations',
+                                ? 'No applications in ${_filterStatus!.label} stage.'
+                                : 'Track your applications, examination dates, and registration numbers in one private dashboard.',
+                            actionLabel: 'Discover Opportunities',
                             onAction: () => context.go('/explorer'),
                           ),
                         ],
@@ -289,9 +285,9 @@ class _ApplicationsScreenState extends ConsumerState<ApplicationsScreen> {
                             margin: const EdgeInsets.only(bottom: AppDimensions.space12),
                             padding: const EdgeInsets.all(AppDimensions.space16),
                             decoration: BoxDecoration(
-                              color: AppColors.surface,
+                              color: context.themeCard,
                               borderRadius: BorderRadius.circular(AppDimensions.radiusCard),
-                              border: Border.all(color: AppColors.border),
+                              border: Border.all(color: context.themeBorder),
                             ),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
@@ -337,7 +333,7 @@ class _ApplicationsScreenState extends ConsumerState<ApplicationsScreen> {
                                   onTap: () => context.push('/opportunities/${item.examinationId}'),
                                   child: Text(
                                     item.examination.title,
-                                    style: AppTypography.cardTitle.copyWith(fontSize: 15),
+                                    style: AppTypography.cardTitle.copyWith(fontSize: 15, color: context.themeTextMain),
                                   ),
                                 ),
                                 const SizedBox(height: 4),
@@ -345,7 +341,7 @@ class _ApplicationsScreenState extends ConsumerState<ApplicationsScreen> {
                                 // Organisation
                                 Text(
                                   item.examination.organisation,
-                                  style: AppTypography.caption.copyWith(color: AppColors.textMuted),
+                                  style: AppTypography.caption.copyWith(color: context.themeTextMuted),
                                 ),
                                 const SizedBox(height: AppDimensions.space12),
 
@@ -354,21 +350,21 @@ class _ApplicationsScreenState extends ConsumerState<ApplicationsScreen> {
                                   Container(
                                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                     decoration: BoxDecoration(
-                                      color: AppColors.secondarySurface,
+                                      color: context.themeSurfaceElevated,
                                       borderRadius: BorderRadius.circular(AppDimensions.radiusSmall),
-                                      border: Border.all(color: AppColors.border),
+                                      border: Border.all(color: context.themeBorder),
                                     ),
                                     child: Row(
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
-                                        const Icon(LucideIcons.hash, size: 12, color: AppColors.textMuted),
+                                        Icon(LucideIcons.hash, size: 12, color: context.themeTextMuted),
                                         const SizedBox(width: 4),
                                         Text(
                                           'Reg / Roll No: ${item.applicationNumber}',
-                                          style: const TextStyle(
+                                          style: TextStyle(
                                             fontSize: 11,
                                             fontFamily: 'monospace',
-                                            color: AppColors.textMain,
+                                            color: context.themeTextMain,
                                           ),
                                         ),
                                       ],
@@ -381,7 +377,7 @@ class _ApplicationsScreenState extends ConsumerState<ApplicationsScreen> {
                                   Text(
                                     item.personalNotes!,
                                     style: AppTypography.caption.copyWith(
-                                      color: AppColors.textMuted,
+                                      color: context.themeTextMuted,
                                       fontStyle: FontStyle.italic,
                                     ),
                                   ),
@@ -394,13 +390,13 @@ class _ApplicationsScreenState extends ConsumerState<ApplicationsScreen> {
                                   children: [
                                     Text(
                                       'Updated ${DateFormat('d MMM yyyy').format(item.lastUpdated)}',
-                                      style: AppTypography.caption.copyWith(fontSize: 10, color: AppColors.textSubtle),
+                                      style: AppTypography.caption.copyWith(fontSize: 10, color: context.themeTextSubtle),
                                     ),
                                     InkWell(
                                       onTap: () => context.push('/opportunities/${item.examinationId}'),
-                                      child: Row(
+                                      child: const Row(
                                         children: [
-                                          const Text(
+                                          Text(
                                             'View Details',
                                             style: TextStyle(
                                               color: AppColors.primaryGreen,
@@ -408,8 +404,8 @@ class _ApplicationsScreenState extends ConsumerState<ApplicationsScreen> {
                                               fontWeight: FontWeight.w600,
                                             ),
                                           ),
-                                          const SizedBox(width: 2),
-                                          const Icon(LucideIcons.arrowRight, size: 12, color: AppColors.primaryGreen),
+                                          SizedBox(width: 2),
+                                          Icon(LucideIcons.arrowRight, size: 12, color: AppColors.primaryGreen),
                                         ],
                                       ),
                                     ),

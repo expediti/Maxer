@@ -87,14 +87,14 @@ class _MainScaffoldState extends ConsumerState<MainScaffold> {
         }
       },
       child: Scaffold(
-        backgroundColor: AppColors.mainBackground,
+        backgroundColor: context.themeBackground,
         body: widget.child,
         bottomNavigationBar: Container(
-          decoration: const BoxDecoration(
-            color: AppColors.secondaryBackground,
+          decoration: BoxDecoration(
+            color: context.isDarkMode ? AppColors.secondaryBackground : AppColors.lightBackground,
             border: Border(
               top: BorderSide(
-                color: AppColors.border,
+                color: context.themeBorder,
                 width: 1.0,
               ),
             ),
@@ -170,14 +170,18 @@ class _MainScaffoldState extends ConsumerState<MainScaffold> {
               duration: const Duration(milliseconds: 200),
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
               decoration: BoxDecoration(
-                color: isSelected ? AppColors.elevatedSurface : Colors.transparent,
+                color: isSelected
+                    ? (context.isDarkMode ? AppColors.elevatedSurface : AppColors.lightSurfaceElevated)
+                    : Colors.transparent,
                 borderRadius: BorderRadius.circular(16),
-                border: isSelected ? Border.all(color: AppColors.border, width: 1.0) : null,
+                border: isSelected ? Border.all(color: context.themeBorder, width: 1.0) : null,
               ),
               child: Icon(
                 icon,
                 size: 20,
-                color: isSelected ? AppColors.white : AppColors.mutedText,
+                color: isSelected
+                    ? (context.isDarkMode ? AppColors.white : AppColors.black)
+                    : (context.isDarkMode ? AppColors.mutedText : AppColors.lightTextSubtle),
               ),
             ),
             const SizedBox(height: 2),
@@ -186,7 +190,9 @@ class _MainScaffoldState extends ConsumerState<MainScaffold> {
               style: AppTypography.caption.copyWith(
                 fontSize: 11,
                 fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                color: isSelected ? AppColors.white : AppColors.mutedText,
+                color: isSelected
+                    ? (context.isDarkMode ? AppColors.white : AppColors.black)
+                    : (context.isDarkMode ? AppColors.mutedText : AppColors.lightTextSubtle),
               ),
             ),
           ],

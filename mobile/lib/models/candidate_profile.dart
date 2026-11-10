@@ -13,6 +13,7 @@ class CandidateProfile {
   final String? state;
   final String? district;
   final String countryOfResidence;
+  final String? avatarUrl;
 
   // Background
   final String? currentStatus; // Studying in school, Pursuing undergraduate degree, etc.
@@ -90,6 +91,7 @@ class CandidateProfile {
     this.state,
     this.district,
     this.countryOfResidence = 'India',
+    this.avatarUrl,
     this.currentStatus,
     this.socialCategory = 'General',
     this.isObcNcl = false,
@@ -216,18 +218,18 @@ class CandidateProfile {
     int filled = 0;
     if (fullName.trim().isNotEmpty) filled++;
     if (dateOfBirth != null) filled++;
-    if (gender != null) filled++;
-    if (state != null) filled++;
-    if (district != null) filled++;
-    if (currentStatus != null) filled++;
+    if (gender != null && gender!.isNotEmpty) filled++;
     if (socialCategory.isNotEmpty) filled++;
+    if (state != null && state!.isNotEmpty) filled++;
+    if (district != null && district!.isNotEmpty) filled++;
+    if (currentStatus != null && currentStatus!.isNotEmpty) filled++;
     if (class10Year != null || class12Year != null) filled++;
-    if (highestQualification != null) filled++;
-    if (degreeName != null) filled++;
-    if (stream != null) filled++;
-    if (effectiveScore != null) filled++;
+    if (highestQualification != null && highestQualification!.isNotEmpty) filled++;
+    if ((degreeName != null && degreeName!.isNotEmpty) || (stream != null && stream!.isNotEmpty)) filled++;
+    if (effectiveScore != null && effectiveScore! > 0) filled++;
     if (preferredCategories.isNotEmpty) filled++;
     if (careerInterests.isNotEmpty) filled++;
+    if (avatarUrl != null && avatarUrl!.isNotEmpty) filled++;
     return ((filled / total) * 100).round();
   }
 
@@ -252,6 +254,7 @@ class CandidateProfile {
     String? state,
     String? district,
     String? countryOfResidence,
+    String? avatarUrl,
     String? currentStatus,
     String? socialCategory,
     bool? isObcNcl,
@@ -319,6 +322,7 @@ class CandidateProfile {
       state: state ?? this.state,
       district: district ?? this.district,
       countryOfResidence: countryOfResidence ?? this.countryOfResidence,
+      avatarUrl: avatarUrl ?? this.avatarUrl,
       currentStatus: currentStatus ?? this.currentStatus,
       socialCategory: socialCategory ?? this.socialCategory,
       isObcNcl: isObcNcl ?? this.isObcNcl,
@@ -455,6 +459,7 @@ class CandidateProfile {
       nationality: data['nationality']?.toString() ?? 'Indian',
       state: data['state']?.toString(),
       district: data['district']?.toString(),
+      avatarUrl: data['avatar_url']?.toString(),
       socialCategory: data['social_category']?.toString() ?? 'General',
       isObcNcl: data['is_obc_ncl'] == true,
       isPwBD: data['is_pwbd'] == true,

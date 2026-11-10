@@ -68,18 +68,31 @@ class AppColors {
   static const Color darkBorderSubtle = bordersLight;
   static const Color darkDivider = divider;
 
-  static const Color lightBackground = mainBackground;
-  static const Color lightSecondaryBackground = secondaryBackground;
-  static const Color lightSurface = cardBackground;
-  static const Color lightSurfaceElevated = elevatedSurface;
-  static const Color lightTextMain = primaryText;
-  static const Color lightTextMuted = secondaryText;
-  static const Color lightTextSubtle = mutedText;
-  static const Color lightBorder = border;
-  static const Color lightBorderSubtle = bordersLight;
-  static const Color lightDivider = divider;
+  static const Color lightBackground = Color(0xFFFFFFFF);
+  static const Color lightSecondaryBackground = Color(0xFFF8F9FA);
+  static const Color lightSurface = Color(0xFFFFFFFF);
+  static const Color lightSurfaceElevated = Color(0xFFF4F4F5);
+  static const Color lightCardBackground = Color(0xFFFFFFFF);
+  static const Color lightTextMain = Color(0xFF0F172A);
+  static const Color lightTextMuted = Color(0xFF475569);
+  static const Color lightTextSubtle = Color(0xFF64748B);
+  static const Color lightBorder = Color(0xFFE2E8F0);
+  static const Color lightBorderSubtle = Color(0xFFF1F5F9);
+  static const Color lightDivider = Color(0xFFE2E8F0);
 
   static const Color primaryBlue = primaryGreen;
   static const Color primaryBlueDark = secondaryGreen;
   static const Color primaryBlueLight = greenTint;
+}
+
+/// Dynamic context extensions ensuring 100% consistent light & dark theme rendering
+extension BuildContextThemeX on BuildContext {
+  bool get isDarkMode => Theme.of(this).brightness == Brightness.dark;
+  Color get themeBackground => Theme.of(this).scaffoldBackgroundColor;
+  Color get themeCard => Theme.of(this).cardColor;
+  Color get themeSurfaceElevated => Theme.of(this).colorScheme.surfaceContainerHighest;
+  Color get themeTextMain => Theme.of(this).colorScheme.onSurface;
+  Color get themeTextMuted => Theme.of(this).colorScheme.onSurfaceVariant;
+  Color get themeTextSubtle => isDarkMode ? AppColors.mutedText : AppColors.lightTextSubtle;
+  Color get themeBorder => Theme.of(this).dividerColor;
 }

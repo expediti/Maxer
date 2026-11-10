@@ -190,3 +190,7 @@ final authProvider = StateNotifierProvider<AuthNotifier, AuthState>((ref) {
   final repo = ref.watch(authRepositoryProvider);
   return AuthNotifier(repo);
 });
+
+final currentUserProvider = Provider<UserModel?>((ref) {
+  return ref.watch(authProvider).user;
+});

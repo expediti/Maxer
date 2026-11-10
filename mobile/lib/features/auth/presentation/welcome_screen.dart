@@ -48,20 +48,20 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> with WidgetsBindi
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: AppColors.elevatedSurface,
+        backgroundColor: context.themeCard,
         shape: RoundedRectangleBorder(
           borderRadius: AppDimensions.roundedDefault,
-          side: const BorderSide(color: AppColors.border),
+          side: BorderSide(color: context.themeBorder),
         ),
         title: Text(
           title,
-          style: AppTypography.screenTitle.copyWith(color: AppColors.primaryText),
+          style: AppTypography.screenTitle.copyWith(color: context.themeTextMain),
         ),
         content: SingleChildScrollView(
           child: Text(
             content,
             style: AppTypography.bodyMuted.copyWith(
-              color: AppColors.secondaryText,
+              color: context.themeTextMuted,
               height: 1.5,
             ),
           ),
@@ -115,7 +115,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> with WidgetsBindi
     });
 
     return Scaffold(
-      backgroundColor: AppColors.mainBackground,
+      backgroundColor: context.themeBackground,
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(
@@ -143,7 +143,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> with WidgetsBindi
                   fontWeight: FontWeight.w800,
                   letterSpacing: -0.8,
                   height: 1.2,
-                  color: AppColors.primaryText,
+                  color: context.themeTextMain,
                 ),
               ),
 
@@ -158,31 +158,31 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> with WidgetsBindi
                   style: AppTypography.bodyMuted.copyWith(
                     fontSize: 14.5,
                     height: 1.5,
-                    color: AppColors.secondaryText,
+                    color: context.themeTextMuted,
                   ),
                 ),
               ),
 
               const Spacer(flex: 4),
 
-              // Continue with Google Button (Official 4-color Google G, dark elevated surface)
+              // Continue with Google Button
               OutlinedButton(
                 onPressed: _isGoogleLoading ? null : _handleGoogleSignIn,
                 style: OutlinedButton.styleFrom(
                   minimumSize: const Size.fromHeight(52),
-                  backgroundColor: AppColors.cardBackground,
-                  side: const BorderSide(color: AppColors.border, width: 1.0),
+                  backgroundColor: context.themeCard,
+                  side: BorderSide(color: context.themeBorder, width: 1.0),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
                   ),
                 ),
                 child: _isGoogleLoading
-                    ? const SizedBox(
+                    ? SizedBox(
                         width: 20,
                         height: 20,
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(AppColors.white),
+                          valueColor: AlwaysStoppedAnimation<Color>(context.themeTextMain),
                         ),
                       )
                     : Row(
@@ -193,7 +193,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> with WidgetsBindi
                           Text(
                             'Continue with Google',
                             style: AppTypography.button.copyWith(
-                              color: AppColors.primaryText,
+                              color: context.themeTextMain,
                               fontSize: 14.5,
                               fontWeight: FontWeight.w600,
                             ),
@@ -204,13 +204,13 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> with WidgetsBindi
 
               const SizedBox(height: AppDimensions.space12),
 
-              // Continue with Email Button (Crisp White filled action with black text)
+              // Continue with Email Button
               ElevatedButton(
                 onPressed: () => context.push('/auth'),
                 style: ElevatedButton.styleFrom(
                   minimumSize: const Size.fromHeight(52),
-                  backgroundColor: AppColors.white,
-                  foregroundColor: AppColors.black,
+                  backgroundColor: context.isDarkMode ? AppColors.white : AppColors.primaryGreen,
+                  foregroundColor: context.isDarkMode ? AppColors.black : AppColors.white,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
                   ),
@@ -219,7 +219,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> with WidgetsBindi
                 child: Text(
                   'Continue with Email',
                   style: AppTypography.button.copyWith(
-                    color: AppColors.black,
+                    color: context.isDarkMode ? AppColors.black : AppColors.white,
                     fontSize: 14.5,
                     fontWeight: FontWeight.w700,
                   ),
@@ -240,15 +240,15 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> with WidgetsBindi
                     child: Text(
                       'Terms of Service',
                       style: AppTypography.caption.copyWith(
-                        color: AppColors.secondaryText,
+                        color: context.themeTextMuted,
                         decoration: TextDecoration.underline,
                         fontSize: 12,
                       ),
                     ),
                   ),
-                  const Text(
+                  Text(
                     '   •   ',
-                    style: TextStyle(color: AppColors.mutedText),
+                    style: TextStyle(color: context.themeTextSubtle),
                   ),
                   GestureDetector(
                     onTap: () => _showLegalDialog(
@@ -258,7 +258,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> with WidgetsBindi
                     child: Text(
                       'Privacy Policy',
                       style: AppTypography.caption.copyWith(
-                        color: AppColors.secondaryText,
+                        color: context.themeTextMuted,
                         decoration: TextDecoration.underline,
                         fontSize: 12,
                       ),

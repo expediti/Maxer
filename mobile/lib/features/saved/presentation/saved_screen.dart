@@ -47,13 +47,13 @@ class _SavedScreenState extends ConsumerState<SavedScreen> {
     }
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: context.themeBackground,
       appBar: AppBar(
-        backgroundColor: AppColors.background,
+        backgroundColor: context.themeBackground,
         elevation: 0,
         title: Text(
           'Saved Examinations',
-          style: AppTypography.screenTitle.copyWith(fontSize: 18),
+          style: AppTypography.screenTitle.copyWith(fontSize: 18, color: context.themeTextMain),
         ),
         actions: [
           IconButton(
@@ -80,10 +80,10 @@ class _SavedScreenState extends ConsumerState<SavedScreen> {
               ),
               child: TextField(
                 onChanged: (val) => setState(() => _searchQuery = val),
-                style: const TextStyle(color: AppColors.textMain, fontSize: 13),
-                decoration: const InputDecoration(
+                style: TextStyle(color: context.themeTextMain, fontSize: 13),
+                decoration: InputDecoration(
                   hintText: 'Search within bookmarked opportunities...',
-                  prefixIcon: Icon(LucideIcons.search, size: 18, color: AppColors.textMuted),
+                  prefixIcon: Icon(LucideIcons.search, size: 18, color: context.themeTextMuted),
                 ),
               ),
             ),
@@ -164,7 +164,7 @@ class _SavedScreenState extends ConsumerState<SavedScreen> {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(
                                     content: Text('Removed "${opp.title}" from saved.'),
-                                    backgroundColor: AppColors.surface,
+                                    backgroundColor: context.themeCard,
                                     action: SnackBarAction(
                                       label: 'Undo',
                                       textColor: AppColors.primaryGreen,

@@ -154,6 +154,12 @@ class Examination {
   final String? requisitionId;
   final String? advertisementNumber;
   final String verificationStatus;
+  final String verificationTier;
+  final bool isApplicationUrlVerified;
+  final String applicationUrlStatus;
+  final String? verifiedApplicationUrl;
+  final String? verifiedNotificationUrl;
+  final String applicationStatus;
   final Map<String, dynamic> evidence;
 
   const Examination({
@@ -166,6 +172,7 @@ class Examination {
     this.issuingAuthority = '',
     required this.category,
     this.status = ExaminationStatus.published,
+    this.applicationStatus = 'open',
     this.overview = '',
     this.vacancies,
     this.eligibilityCriteriaSummary = '',
@@ -214,6 +221,11 @@ class Examination {
     this.requisitionId,
     this.advertisementNumber,
     this.verificationStatus = 'verified',
+    this.verificationTier = 'PARTIALLY_VERIFIED',
+    this.isApplicationUrlVerified = false,
+    this.applicationUrlStatus = 'NEEDS_REVIEW',
+    this.verifiedApplicationUrl,
+    this.verifiedNotificationUrl,
     this.evidence = const {},
   });
 
@@ -280,6 +292,7 @@ class Examination {
     String? requisitionId,
     String? advertisementNumber,
     String? verificationStatus,
+    String? applicationStatus,
     Map<String, dynamic>? evidence,
   }) {
     return Examination(
@@ -292,6 +305,7 @@ class Examination {
       issuingAuthority: issuingAuthority ?? this.issuingAuthority,
       category: category ?? this.category,
       status: status ?? this.status,
+      applicationStatus: applicationStatus ?? this.applicationStatus,
       overview: overview ?? this.overview,
       vacancies: vacancies ?? this.vacancies,
       eligibilityCriteriaSummary: eligibilityCriteriaSummary ?? this.eligibilityCriteriaSummary,
@@ -495,6 +509,13 @@ class Examination {
       requisitionId: json['requisition_id']?.toString(),
       advertisementNumber: json['advertisement_number']?.toString(),
       verificationStatus: json['verification_status']?.toString() ?? 'verified',
+      verificationTier: json['verification_tier']?.toString() ??
+          (json['verification_status']?.toString().toUpperCase() == 'VERIFIED' ? 'VERIFIED' : 'PARTIALLY_VERIFIED'),
+      isApplicationUrlVerified: json['is_application_url_verified'] == true,
+      applicationUrlStatus: json['application_url_status']?.toString() ?? 'NEEDS_REVIEW',
+      verifiedApplicationUrl: json['verified_application_url']?.toString(),
+      verifiedNotificationUrl: json['verified_notification_url']?.toString(),
+      applicationStatus: json['application_status']?.toString() ?? 'open',
       evidence: json['evidence'] is Map ? Map<String, dynamic>.from(json['evidence'] as Map) : {},
     );
   }

@@ -9,6 +9,7 @@ import 'package:rexam/core/widgets/organisation_logo.dart';
 import 'package:rexam/features/opportunities/domain/opportunity.dart';
 import 'package:rexam/features/opportunities/presentation/widgets/status_badge.dart';
 import 'package:rexam/features/saved/presentation/providers/saved_provider.dart';
+import 'package:rexam/features/reminders/presentation/providers/reminders_provider.dart';
 import 'package:rexam/features/profile/presentation/providers/profile_provider.dart';
 import 'package:rexam/models/eligibility_report.dart';
 import 'package:rexam/repositories/eligibility_repository.dart';
@@ -30,8 +31,10 @@ class OpportunityCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final savedList = ref.watch(savedProvider);
+    final remindersSet = ref.watch(remindersProvider);
     final profileAsync = ref.watch(profileProvider);
     final isSaved = savedList.any((o) => o.id == opportunity.id || o.slug == opportunity.id);
+    final isReminded = remindersSet.contains(opportunity.id);
     final isClosing = DateFormatter.isClosingSoon(opportunity.applicationDeadline);
     final daysLeft = opportunity.applicationDeadline?.difference(DateTime.now()).inDays;
 
@@ -55,10 +58,10 @@ class OpportunityCard extends ConsumerWidget {
         child: Container(
           padding: const EdgeInsets.all(AppDimensions.space16),
           decoration: BoxDecoration(
-            color: AppColors.cardBackground,
+            color: context.themeCard,
             borderRadius: BorderRadius.circular(AppDimensions.radiusCard),
             border: Border.all(
-              color: isClosing ? AppColors.warning.withValues(alpha: 0.6) : AppColors.border,
+              color: isClosing ? AppColors.warning.withValues(alpha: 0.6) : context.themeBorder,
               width: AppDimensions.cardBorderWidth,
             ),
           ),
@@ -88,7 +91,7 @@ class OpportunityCard extends ConsumerWidget {
                           style: AppTypography.cardTitle.copyWith(
                             fontSize: 15,
                             fontWeight: FontWeight.w700,
-                            color: AppColors.primaryText,
+                            color: context.themeTextMain,
                           ),
                         ),
                         const SizedBox(height: 3),
@@ -98,7 +101,7 @@ class OpportunityCard extends ConsumerWidget {
                           overflow: TextOverflow.ellipsis,
                           style: AppTypography.caption.copyWith(
                             fontSize: 12.5,
-                            color: AppColors.secondaryText,
+                            color: context.themeTextMuted,
                             fontWeight: FontWeight.w500,
                           ),
                         ),
@@ -106,57 +109,112 @@ class OpportunityCard extends ConsumerWidget {
                     ),
                   ),
 
-                  IconButton(
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(),
-                    icon: Icon(
-                      isSaved ? LucideIcons.bookmarkCheck : LucideIcons.bookmark,
-                      size: 20,
-                      color: isSaved ? AppColors.white : AppColors.mutedText,
-                    ),
-                    onPressed: () {
-                      ref.read(savedProvider.notifier).toggleSave(opportunity);
-                    },
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      IconButton(
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                        icon: Icon(
+                          isReminded ? LucideIcons.bellRing : LucideIcons.bell,
+                          size: 18,
+                          color: isReminded ? AppColors.primaryGreen : AppColors.mutedText,
+                        ),
+                        tooltip: isReminded ? 'Reminders Active' : 'Remind Me',
+                        onPressed: () {
+                          ref.read(remindersProvider.notifier).toggleReminder(opportunity);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                isReminded
+                                    ? 'Reminders disabled for ${opportunity.title}'
+                                    : 'Reminders enabled (7d, 3d, 2d, 24h & Exam Date in IST)',
+                              ),
+                              duration: const Duration(seconds: 2),
+                            ),
+                          );
+                        },
+                      ),
+                      const SizedBox(width: AppDimensions.space8),
+                      IconButton(
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                        icon: Icon(
+                          isSaved ? LucideIcons.bookmarkCheck : LucideIcons.bookmark,
+                          size: 19,
+                          color: isSaved ? (context.isDarkMode ? AppColors.white : AppColors.black) : AppColors.mutedText,
+                        ),
+                        tooltip: isSaved ? 'Bookmarked' : 'Save Opportunity',
+                        onPressed: () {
+                          ref.read(savedProvider.notifier).toggleSave(opportunity);
+                        },
+                      ),
+                    ],
                   ),
                 ],
               ),
               const SizedBox(height: AppDimensions.space12),
 
-              // Badges Row: Category, Vacancies, Salary/Stipend
+              // Badges Row: Status, Category, State, Vacancies, Salary/Stipend
               Wrap(
                 spacing: AppDimensions.space8,
                 runSpacing: 4,
                 children: [
+                  OpportunityLifecycleBadge(
+                    applicationStatus: opportunity.applicationStatus,
+                    isCompact: true,
+                  ),
+                  VerificationTierBadge(
+                    tier: opportunity.verificationTier,
+                    isCompact: true,
+                  ),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                     decoration: BoxDecoration(
-                      color: AppColors.elevatedSurface,
+                      color: context.themeSurfaceElevated,
                       borderRadius: BorderRadius.circular(AppDimensions.radiusSmall),
-                      border: Border.all(color: AppColors.border),
+                      border: Border.all(color: context.themeBorder),
                     ),
                     child: Text(
                       opportunity.category.label,
                       style: AppTypography.caption.copyWith(
-                        color: AppColors.secondaryText,
+                        color: context.themeTextMuted,
                         fontSize: 11,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
                   ),
+                  if (opportunity.state != null && opportunity.state!.isNotEmpty)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: context.themeSurfaceElevated,
+                        borderRadius: BorderRadius.circular(AppDimensions.radiusSmall),
+                        border: Border.all(color: context.themeBorder),
+                      ),
+                      child: Text(
+                        opportunity.state!,
+                        style: AppTypography.caption.copyWith(
+                          color: context.themeTextMuted,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
                   if (opportunity.vacancies != null)
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                       decoration: BoxDecoration(
-                        color: AppColors.elevatedSurface,
+                        color: context.themeSurfaceElevated,
                         borderRadius: BorderRadius.circular(AppDimensions.radiusSmall),
-                        border: Border.all(color: AppColors.border),
+                        border: Border.all(color: context.themeBorder),
                       ),
                       child: Text(
                         opportunity.category == ExaminationCategory.scholarship
                             ? '${opportunity.vacancies} Slots'
                             : '${opportunity.vacancies} Posts',
                         style: AppTypography.caption.copyWith(
-                          color: AppColors.primaryText,
+                          color: context.themeTextMain,
                           fontSize: 11,
                           fontWeight: FontWeight.w700,
                         ),
@@ -166,14 +224,14 @@ class OpportunityCard extends ConsumerWidget {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                       decoration: BoxDecoration(
-                        color: AppColors.elevatedSurface,
+                        color: context.themeSurfaceElevated,
                         borderRadius: BorderRadius.circular(AppDimensions.radiusSmall),
-                        border: Border.all(color: AppColors.border),
+                        border: Border.all(color: context.themeBorder),
                       ),
                       child: Text(
                         opportunity.salaryOrPayScale!,
                         style: AppTypography.caption.copyWith(
-                          color: AppColors.primaryText,
+                          color: context.themeTextMain,
                           fontSize: 11,
                           fontWeight: FontWeight.w600,
                         ),
@@ -183,14 +241,14 @@ class OpportunityCard extends ConsumerWidget {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                       decoration: BoxDecoration(
-                        color: AppColors.elevatedSurface,
+                        color: context.themeSurfaceElevated,
                         borderRadius: BorderRadius.circular(AppDimensions.radiusSmall),
-                        border: Border.all(color: AppColors.border),
+                        border: Border.all(color: context.themeBorder),
                       ),
-                      child: const Text(
+                      child: Text(
                         'Final Year Appearing Accepted',
                         style: TextStyle(
-                          color: AppColors.primaryText,
+                          color: context.themeTextMain,
                           fontSize: 10.5,
                           fontWeight: FontWeight.w600,
                         ),
@@ -220,9 +278,9 @@ class OpportunityCard extends ConsumerWidget {
                   width: double.infinity,
                   padding: const EdgeInsets.all(AppDimensions.space10),
                   decoration: BoxDecoration(
-                    color: AppColors.elevatedSurface,
+                    color: context.themeSurfaceElevated,
                     borderRadius: BorderRadius.circular(AppDimensions.radiusSmall),
-                    border: Border.all(color: AppColors.border),
+                    border: Border.all(color: context.themeBorder),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -234,7 +292,7 @@ class OpportunityCard extends ConsumerWidget {
                           Text(
                             'Why You Qualify',
                             style: AppTypography.caption.copyWith(
-                              color: AppColors.primaryText,
+                              color: context.themeTextMain,
                               fontWeight: FontWeight.w700,
                               fontSize: 11.5,
                             ),
@@ -253,13 +311,13 @@ class OpportunityCard extends ConsumerWidget {
                                 child: Row(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    const Text('• ',
-                                        style: TextStyle(color: AppColors.secondaryText, fontSize: 11)),
+                                    Text('• ',
+                                        style: TextStyle(color: context.themeTextMuted, fontSize: 11)),
                                     Expanded(
                                       child: Text(
                                         c.details,
-                                        style: const TextStyle(
-                                          color: AppColors.secondaryText,
+                                        style: TextStyle(
+                                          color: context.themeTextMuted,
                                           fontSize: 11.5,
                                           height: 1.3,
                                         ),
@@ -277,8 +335,8 @@ class OpportunityCard extends ConsumerWidget {
                             Expanded(
                               child: Text(
                                 'Relaxations applied: ${report.applicableRelaxations.join("; ")}',
-                                style: const TextStyle(
-                                  color: AppColors.primaryText,
+                                style: TextStyle(
+                                  color: context.themeTextMain,
                                   fontSize: 11,
                                   fontWeight: FontWeight.w500,
                                 ),
@@ -293,7 +351,7 @@ class OpportunityCard extends ConsumerWidget {
               ],
 
               const SizedBox(height: AppDimensions.space12),
-              const Divider(color: AppColors.divider, height: 1),
+              Divider(color: context.themeBorder, height: 1),
               const SizedBox(height: AppDimensions.space10),
 
               // Footer: Deadline / Countdown and Status Badge

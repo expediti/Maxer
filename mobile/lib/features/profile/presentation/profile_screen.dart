@@ -4,12 +4,13 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
-import '../../../core/constants/app_colors.dart';
-import '../../../core/constants/app_dimensions.dart';
-import '../../../core/theme/app_typography.dart';
-import '../../../core/utils/currency_formatter.dart';
-import '../../auth/presentation/providers/auth_provider.dart';
-import 'providers/profile_provider.dart';
+import 'package:rexam/core/constants/app_colors.dart';
+import 'package:rexam/core/constants/app_dimensions.dart';
+import 'package:rexam/core/theme/app_typography.dart';
+import 'package:rexam/core/utils/currency_formatter.dart';
+import 'package:rexam/features/auth/presentation/providers/auth_provider.dart';
+import 'package:rexam/features/profile/presentation/providers/profile_provider.dart';
+import 'package:rexam/features/profile/presentation/widgets/avatar_picker.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
@@ -18,20 +19,20 @@ class ProfileScreen extends ConsumerWidget {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: AppColors.cardBackground,
+        backgroundColor: context.themeCard,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppDimensions.radiusCard),
-          side: const BorderSide(color: AppColors.border),
+          side: BorderSide(color: context.themeBorder),
         ),
-        title: const Text('Sign Out', style: TextStyle(color: AppColors.primaryText)),
-        content: const Text(
+        title: Text('Sign Out', style: TextStyle(color: context.themeTextMain, fontWeight: FontWeight.bold)),
+        content: Text(
           'Are you sure you want to end your current session? You will need to sign in again to access your tracked applications.',
-          style: TextStyle(color: AppColors.secondaryText),
+          style: TextStyle(color: context.themeTextMuted),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Cancel', style: TextStyle(color: AppColors.secondaryText)),
+            child: Text('Cancel', style: TextStyle(color: context.themeTextMuted)),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
@@ -55,17 +56,20 @@ class ProfileScreen extends ConsumerWidget {
     final profileAsync = ref.watch(profileProvider);
 
     return Scaffold(
-      backgroundColor: AppColors.mainBackground,
+      backgroundColor: context.themeBackground,
       appBar: AppBar(
-        backgroundColor: AppColors.mainBackground,
+        backgroundColor: context.themeBackground,
         elevation: 0,
         title: Text(
           'Candidate Profile',
-          style: AppTypography.screenTitle.copyWith(fontSize: 18),
+          style: AppTypography.screenTitle.copyWith(
+            fontSize: 18,
+            color: context.themeTextMain,
+          ),
         ),
         actions: [
           IconButton(
-            icon: const Icon(LucideIcons.settings, color: AppColors.primaryText, size: 20),
+            icon: Icon(LucideIcons.settings, color: context.themeTextMain, size: 20),
             tooltip: 'Settings',
             onPressed: () => context.push('/settings'),
           ),
@@ -74,9 +78,6 @@ class ProfileScreen extends ConsumerWidget {
       body: SafeArea(
         child: profileAsync.when(
           data: (profile) {
-            final initials = profile.fullName.trim().isNotEmpty
-                ? profile.fullName.trim().split(' ').map((e) => e.isNotEmpty ? e[0] : '').take(2).join().toUpperCase()
-                : 'C';
             final completion = profile.completionPercentage;
 
             return SingleChildScrollView(
@@ -91,26 +92,15 @@ class ProfileScreen extends ConsumerWidget {
                   Container(
                     padding: const EdgeInsets.all(AppDimensions.space16),
                     decoration: BoxDecoration(
-                      color: AppColors.cardBackground,
+                      color: context.themeCard,
                       borderRadius: BorderRadius.circular(AppDimensions.radiusCard),
-                      border: Border.all(color: AppColors.border),
+                      border: Border.all(color: context.themeBorder),
                     ),
                     child: Column(
                       children: [
                         Row(
                           children: [
-                            CircleAvatar(
-                              radius: 28,
-                              backgroundColor: AppColors.elevatedSurface,
-                              child: Text(
-                                initials,
-                                style: const TextStyle(
-                                  color: AppColors.primaryText,
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                            ),
+                            const AvatarPickerWidget(radius: 28, editable: true),
                             const SizedBox(width: AppDimensions.space16),
                             Expanded(
                               child: Column(
@@ -118,27 +108,30 @@ class ProfileScreen extends ConsumerWidget {
                                 children: [
                                   Text(
                                     profile.fullName.isNotEmpty ? profile.fullName : 'Candidate',
-                                    style: AppTypography.screenTitle.copyWith(fontSize: 18),
+                                    style: AppTypography.screenTitle.copyWith(
+                                      fontSize: 18,
+                                      color: context.themeTextMain,
+                                    ),
                                   ),
                                   const SizedBox(height: 2),
                                   Text(
                                     profile.email,
-                                    style: AppTypography.caption.copyWith(color: AppColors.secondaryText),
+                                    style: AppTypography.caption.copyWith(color: context.themeTextMuted),
                                   ),
                                   const SizedBox(height: 6),
                                   Container(
                                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                                     decoration: BoxDecoration(
-                                      color: AppColors.elevatedSurface,
+                                      color: context.themeSurfaceElevated,
                                       borderRadius: BorderRadius.circular(AppDimensions.radiusSmall),
-                                      border: Border.all(color: AppColors.border),
+                                      border: Border.all(color: context.themeBorder),
                                     ),
                                     child: Text(
                                       '${profile.socialCategory} • ${profile.highestQualification ?? "Graduate"}',
-                                      style: const TextStyle(
+                                      style: TextStyle(
                                         fontSize: 11,
                                         fontWeight: FontWeight.w600,
-                                        color: AppColors.primaryText,
+                                        color: context.themeTextMain,
                                       ),
                                     ),
                                   ),
@@ -150,53 +143,76 @@ class ProfileScreen extends ConsumerWidget {
                         const SizedBox(height: AppDimensions.space16),
 
                         // Profile Completion Progress Bar
-                        Container(
-                          padding: const EdgeInsets.all(AppDimensions.space12),
-                          decoration: BoxDecoration(
-                            color: AppColors.elevatedSurface,
-                            borderRadius: BorderRadius.circular(AppDimensions.radiusSmall),
-                            border: Border.all(color: AppColors.border),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  const Text(
-                                    'Profile Completeness',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w600,
-                                      color: AppColors.primaryText,
+                        InkWell(
+                          onTap: () => context.push('/profile/completion'),
+                          borderRadius: BorderRadius.circular(AppDimensions.radiusSmall),
+                          child: Container(
+                            padding: const EdgeInsets.all(AppDimensions.space12),
+                            decoration: BoxDecoration(
+                              color: context.themeSurfaceElevated,
+                              borderRadius: BorderRadius.circular(AppDimensions.radiusSmall),
+                              border: Border.all(color: context.themeBorder),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text(
+                                      'Profile Completeness',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w600,
+                                        color: context.themeTextMain,
+                                      ),
                                     ),
-                                  ),
-                                  Text(
-                                    '$completion%',
-                                    style: const TextStyle(
-                                      color: AppColors.primaryText,
-                                      fontWeight: FontWeight.w700,
-                                      fontSize: 12,
+                                    Row(
+                                      children: [
+                                        Text(
+                                          '$completion%',
+                                          style: TextStyle(
+                                            color: context.themeTextMain,
+                                            fontWeight: FontWeight.w700,
+                                            fontSize: 12,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 4),
+                                        Icon(LucideIcons.chevronRight, size: 14, color: context.themeTextMuted),
+                                      ],
                                     ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 6),
-                              ClipRRect(
-                                borderRadius: BorderRadius.circular(3),
-                                child: LinearProgressIndicator(
-                                  value: completion / 100.0,
-                                  backgroundColor: AppColors.border,
-                                  valueColor: const AlwaysStoppedAnimation<Color>(AppColors.white),
-                                  minHeight: 5,
+                                  ],
                                 ),
-                              ),
-                            ],
+                                const SizedBox(height: 6),
+                                ClipRRect(
+                                  borderRadius: BorderRadius.circular(3),
+                                  child: LinearProgressIndicator(
+                                    value: completion / 100.0,
+                                    backgroundColor: context.themeBorder,
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                      completion == 100 ? AppColors.primaryGreen : AppColors.primaryGreen,
+                                    ),
+                                    minHeight: 5,
+                                  ),
+                                ),
+                                const SizedBox(height: 6),
+                                Text(
+                                  completion == 100
+                                      ? 'All statutory eligibility attributes verified'
+                                      : 'Tap to view missing details (${100 - completion}% remaining)',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w500,
+                                    color: completion == 100 ? AppColors.primaryGreen : context.themeTextMuted,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                         const SizedBox(height: AppDimensions.space12),
 
-                        // Dedicated Action Buttons: Edit Profile and Qualifications
+                        // Action Buttons: Edit Profile and Qualifications
                         Row(
                           children: [
                             Expanded(
@@ -205,9 +221,9 @@ class ProfileScreen extends ConsumerWidget {
                                 icon: const Icon(LucideIcons.userCheck, size: 15),
                                 label: const Text('Edit Profile'),
                                 style: OutlinedButton.styleFrom(
-                                  side: const BorderSide(color: AppColors.border),
-                                  foregroundColor: AppColors.primaryText,
-                                  backgroundColor: AppColors.elevatedSurface,
+                                  side: BorderSide(color: context.themeBorder),
+                                  foregroundColor: context.themeTextMain,
+                                  backgroundColor: context.themeSurfaceElevated,
                                   minimumSize: const Size.fromHeight(38),
                                   padding: const EdgeInsets.symmetric(horizontal: 10),
                                 ),
@@ -220,9 +236,9 @@ class ProfileScreen extends ConsumerWidget {
                                 icon: const Icon(LucideIcons.graduationCap, size: 15),
                                 label: const Text('Qualifications'),
                                 style: OutlinedButton.styleFrom(
-                                  side: const BorderSide(color: AppColors.border),
-                                  foregroundColor: AppColors.primaryText,
-                                  backgroundColor: AppColors.elevatedSurface,
+                                  side: BorderSide(color: context.themeBorder),
+                                  foregroundColor: context.themeTextMain,
+                                  backgroundColor: context.themeSurfaceElevated,
                                   minimumSize: const Size.fromHeight(38),
                                   padding: const EdgeInsets.symmetric(horizontal: 10),
                                 ),
@@ -237,80 +253,85 @@ class ProfileScreen extends ConsumerWidget {
 
                   // Section 1: Demographics & Personal Info
                   _buildSectionHeaderWithAction(
+                    context,
                     'Personal Demographics',
                     LucideIcons.user,
                     onEdit: () => context.push('/profile/edit'),
                   ),
                   const SizedBox(height: AppDimensions.space8),
-                  _buildInfoCard([
-                    _buildInfoRow('Full Name', profile.fullName),
+                  _buildInfoCard(context, [
+                    _buildInfoRow(context, 'Full Name', profile.fullName),
                     _buildInfoRow(
+                      context,
                       'Date of Birth',
                       profile.dateOfBirth != null ? DateFormat('d MMMM yyyy').format(profile.dateOfBirth!) : 'Not set',
                     ),
-                    _buildInfoRow('Calculated Age', '${profile.calculateAge() ?? "N/A"} Years'),
-                    _buildInfoRow('Gender', profile.gender ?? 'Not set'),
-                    _buildInfoRow('Nationality', profile.nationality),
-                    _buildInfoRow('State of Domicile', profile.state ?? 'All India'),
-                    _buildInfoRow('District', profile.district ?? 'Not set'),
-                    _buildInfoRow('Current Background', profile.currentStatus ?? 'Undergraduate Candidate'),
+                    _buildInfoRow(context, 'Calculated Age', '${profile.calculateAge() ?? "N/A"} Years'),
+                    _buildInfoRow(context, 'Gender', profile.gender ?? 'Not set'),
+                    _buildInfoRow(context, 'Nationality', profile.nationality),
+                    _buildInfoRow(context, 'State of Domicile', profile.state ?? 'All India'),
+                    _buildInfoRow(context, 'District', profile.district ?? 'Not set'),
+                    _buildInfoRow(context, 'Current Background', profile.currentStatus ?? 'Undergraduate Candidate'),
                   ]),
                   const SizedBox(height: AppDimensions.space20),
 
                   // Section 2: Educational Qualifications
                   _buildSectionHeaderWithAction(
+                    context,
                     'Educational Qualifications',
                     LucideIcons.graduationCap,
                     onEdit: () => context.push('/profile/qualifications'),
                   ),
                   const SizedBox(height: AppDimensions.space8),
-                  _buildInfoCard([
+                  _buildInfoCard(context, [
                     if (profile.class10Year != null)
-                      _buildInfoRow('Class 10 Passing Year', '${profile.class10Year}'),
+                      _buildInfoRow(context, 'Class 10 Passing Year', '${profile.class10Year}'),
                     if (profile.class12Year != null)
-                      _buildInfoRow('Class 12 Passing Year', '${profile.class12Year} (${profile.class12Stream ?? "Science"}${profile.class12Percentage != null ? " • ${profile.class12Percentage}%" : ""})'),
-                    _buildInfoRow('Highest Qualification', profile.highestQualification ?? 'Not set'),
-                    _buildInfoRow('Degree / Program', profile.degreeName ?? 'Not set'),
-                    _buildInfoRow('Discipline / Branch', profile.stream ?? 'Not set'),
-                    _buildInfoRow('University / College', profile.institution ?? 'Not set'),
-                    _buildInfoRow('Graduation Year', '${profile.graduationYear ?? "Not set"}'),
-                    _buildInfoRow('Academic Score', profile.formattedScoreDisplay),
-                    _buildInfoRow('Status', profile.degreeStatus ?? 'Completed'),
-                    _buildInfoRow('Active Backlogs', profile.hasActiveBacklogs ? 'Yes' : 'None'),
+                      _buildInfoRow(context, 'Class 12 Passing Year', '${profile.class12Year} (${profile.class12Stream ?? "Science"}${profile.class12Percentage != null ? " • ${profile.class12Percentage}%" : ""})'),
+                    _buildInfoRow(context, 'Highest Qualification', profile.highestQualification ?? 'Not set'),
+                    _buildInfoRow(context, 'Degree / Program', profile.degreeName ?? 'Not set'),
+                    _buildInfoRow(context, 'Discipline / Branch', profile.stream ?? 'Not set'),
+                    _buildInfoRow(context, 'University / College', profile.institution ?? 'Not set'),
+                    _buildInfoRow(context, 'Graduation Year', '${profile.graduationYear ?? "Not set"}'),
+                    _buildInfoRow(context, 'Academic Score', profile.formattedScoreDisplay),
+                    _buildInfoRow(context, 'Status', profile.degreeStatus ?? 'Completed'),
+                    _buildInfoRow(context, 'Active Backlogs', profile.hasActiveBacklogs ? 'Yes' : 'None'),
                     if (profile.gateScore != null)
-                      _buildInfoRow('GATE Score', '${profile.gateScore} (Year: ${profile.gateYear ?? "N/A"})'),
-                    _buildInfoRow('UGC-NET / JRF Qualified', profile.hasNetJrf ? 'Yes (${profile.netSubject ?? "Specialization"})' : 'No'),
+                      _buildInfoRow(context, 'GATE Score', '${profile.gateScore} (Year: ${profile.gateYear ?? "N/A"})'),
+                    _buildInfoRow(context, 'UGC-NET / JRF Qualified', profile.hasNetJrf ? 'Yes (${profile.netSubject ?? "Specialization"})' : 'No'),
                   ]),
                   const SizedBox(height: AppDimensions.space20),
 
                   // Section 3: Statutory Relaxations
                   _buildSectionHeaderWithAction(
+                    context,
                     'Statutory Relaxations & Quota',
                     LucideIcons.shieldCheck,
                     onEdit: () => context.push('/profile/edit'),
                   ),
                   const SizedBox(height: AppDimensions.space8),
-                  _buildInfoCard([
-                    _buildInfoRow('Social Category', profile.socialCategory),
+                  _buildInfoCard(context, [
+                    _buildInfoRow(context, 'Social Category', profile.socialCategory),
                     if (profile.socialCategory == 'OBC')
-                      _buildInfoRow('OBC Non-Creamy Layer', profile.isObcNcl ? 'Yes (NCL)' : 'No (Creamy Layer)'),
-                    _buildInfoRow('PwBD Status', profile.isPwBD ? 'Yes (${profile.pwbdDisabilityType ?? "Benchmark"})' : 'No'),
-                    _buildInfoRow('Ex-Serviceman (ESM)', profile.isExServiceman ? 'Yes' : 'No'),
+                      _buildInfoRow(context, 'OBC Non-Creamy Layer', profile.isObcNcl ? 'Yes (NCL)' : 'No (Creamy Layer)'),
+                    _buildInfoRow(context, 'PwBD Status', profile.isPwBD ? 'Yes (${profile.pwbdDisabilityType ?? "Benchmark"})' : 'No'),
+                    _buildInfoRow(context, 'Ex-Serviceman (ESM)', profile.isExServiceman ? 'Yes' : 'No'),
                   ]),
                   const SizedBox(height: AppDimensions.space20),
 
                   // Section 4: Opportunity Preferences
                   _buildSectionHeaderWithAction(
+                    context,
                     'Opportunity Preferences',
                     LucideIcons.compass,
                     onEdit: () => context.push('/profile/wizard'),
                   ),
                   const SizedBox(height: AppDimensions.space8),
-                  _buildInfoCard([
-                    _buildInfoRow('Preferred Categories', profile.preferredCategories.map((c) => c.label).join(', ')),
-                    _buildInfoRow('Career Disciplines', profile.careerInterests.isNotEmpty ? profile.careerInterests.join(', ') : 'All'),
-                    _buildInfoRow('Pan-India Relocation', profile.willingToRelocate ? 'Yes (Pan-India)' : 'State Only'),
-                    _buildInfoRow('Max Application Fee Budget', CurrencyFormatter.format(profile.maxApplicationFeeBudget)),
+                  _buildInfoCard(context, [
+                    _buildInfoRow(context, 'Preferred Categories', profile.preferredCategories.map((c) => c.label).join(', ')),
+                    _buildInfoRow(context, 'Career Disciplines', profile.careerInterests.isNotEmpty ? profile.careerInterests.join(', ') : 'All'),
+                    _buildInfoRow(context, 'Pan-India Relocation', profile.willingToRelocate ? 'Yes (Pan-India)' : 'State Only'),
+                    _buildInfoRow(context, 'Max Application Fee Budget', CurrencyFormatter.format(profile.maxApplicationFeeBudget)),
                   ]),
                   const SizedBox(height: AppDimensions.space24),
 
@@ -321,7 +342,7 @@ class ProfileScreen extends ConsumerWidget {
                     label: const Text('Sign Out of Rexam', style: TextStyle(color: AppColors.error)),
                     style: OutlinedButton.styleFrom(
                       side: const BorderSide(color: AppColors.error),
-                      backgroundColor: AppColors.cardBackground,
+                      backgroundColor: context.themeCard,
                       minimumSize: const Size.fromHeight(44),
                     ),
                   ),
@@ -330,8 +351,8 @@ class ProfileScreen extends ConsumerWidget {
               ),
             );
           },
-          loading: () => const Center(
-            child: CircularProgressIndicator(color: AppColors.white),
+          loading: () => Center(
+            child: CircularProgressIndicator(color: context.themeTextMain),
           ),
           error: (err, stack) => Center(
             child: Padding(
@@ -348,18 +369,18 @@ class ProfileScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildSectionHeaderWithAction(String title, IconData icon, {required VoidCallback onEdit}) {
+  Widget _buildSectionHeaderWithAction(BuildContext context, String title, IconData icon, {required VoidCallback onEdit}) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Row(
           children: [
-            Icon(icon, size: 14, color: AppColors.secondaryText),
+            Icon(icon, size: 14, color: context.themeTextMuted),
             const SizedBox(width: AppDimensions.space8),
             Text(
               title,
               style: AppTypography.sectionHeader.copyWith(
-                color: AppColors.primaryText,
+                color: context.themeTextMain,
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
               ),
@@ -369,12 +390,12 @@ class ProfileScreen extends ConsumerWidget {
         InkWell(
           onTap: onEdit,
           borderRadius: BorderRadius.circular(4),
-          child: const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
             child: Text(
               'Edit',
               style: TextStyle(
-                color: AppColors.secondaryText,
+                color: context.themeTextMuted,
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
               ),
@@ -385,19 +406,19 @@ class ProfileScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildInfoCard(List<Widget> rows) {
+  Widget _buildInfoCard(BuildContext context, List<Widget> rows) {
     return Container(
       padding: const EdgeInsets.all(AppDimensions.space16),
       decoration: BoxDecoration(
-        color: AppColors.cardBackground,
+        color: context.themeCard,
         borderRadius: BorderRadius.circular(AppDimensions.radiusCard),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: context.themeBorder),
       ),
       child: Column(children: rows),
     );
   }
 
-  Widget _buildInfoRow(String label, String value) {
+  Widget _buildInfoRow(BuildContext context, String label, String value) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6.0),
       child: Row(
@@ -408,7 +429,7 @@ class ProfileScreen extends ConsumerWidget {
             flex: 2,
             child: Text(
               label,
-              style: AppTypography.caption.copyWith(color: AppColors.secondaryText),
+              style: AppTypography.caption.copyWith(color: context.themeTextMuted),
             ),
           ),
           Expanded(
@@ -416,10 +437,10 @@ class ProfileScreen extends ConsumerWidget {
             child: Text(
               value,
               textAlign: TextAlign.right,
-              style: const TextStyle(
+              style: TextStyle(
                 fontWeight: FontWeight.w600,
                 fontSize: 13,
-                color: AppColors.primaryText,
+                color: context.themeTextMain,
               ),
             ),
           ),

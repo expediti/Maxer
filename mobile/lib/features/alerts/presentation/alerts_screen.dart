@@ -73,12 +73,12 @@ class _AlertsScreenState extends ConsumerState<AlertsScreen> {
         }
       },
       child: Scaffold(
-        backgroundColor: AppColors.background,
+        backgroundColor: context.themeBackground,
         appBar: AppBar(
-          backgroundColor: AppColors.background,
+          backgroundColor: context.themeBackground,
           elevation: 0,
           leading: IconButton(
-            icon: const Icon(LucideIcons.arrowLeft, size: 20),
+            icon: Icon(LucideIcons.arrowLeft, size: 20, color: context.themeTextMain),
             onPressed: () {
               if (context.canPop()) {
                 context.pop();
@@ -89,228 +89,231 @@ class _AlertsScreenState extends ConsumerState<AlertsScreen> {
           ),
           title: Text(
             'Notifications & Alerts',
-            style: AppTypography.screenTitle.copyWith(fontSize: 18),
+            style: AppTypography.screenTitle.copyWith(
+              fontSize: 18,
+              color: context.themeTextMain,
+            ),
           ),
-        actions: [
-          if (allAlerts.any((a) => !a.isRead))
-            TextButton.icon(
-              onPressed: () => ref.read(alertsProvider.notifier).markAllAsRead(),
-              icon: const Icon(LucideIcons.checkCheck, size: 14, color: AppColors.primaryGreen),
-              label: const Text(
-                'Mark All Read',
-                style: TextStyle(color: AppColors.primaryGreen, fontSize: 12),
+          actions: [
+            if (allAlerts.any((a) => !a.isRead))
+              TextButton.icon(
+                onPressed: () => ref.read(alertsProvider.notifier).markAllAsRead(),
+                icon: const Icon(LucideIcons.checkCheck, size: 14, color: AppColors.primaryGreen),
+                label: const Text(
+                  'Mark All Read',
+                  style: TextStyle(color: AppColors.primaryGreen, fontSize: 12),
+                ),
               ),
-            ),
-        ],
-      ),
-      body: SafeArea(
-        child: Column(
-          children: [
-            // Filter Pills
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppDimensions.space16,
-                vertical: AppDimensions.space8,
-              ),
-              child: Row(
-                children: [
-                  FilterChip(
-                    label: const Text('All Alerts'),
-                    selected: _selectedType == null,
-                    showCheckmark: false,
-                    selectedColor: AppColors.primaryGreen,
-                    backgroundColor: AppColors.surface,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(AppDimensions.radiusSmall),
-                      side: BorderSide(
-                        color: _selectedType == null ? AppColors.primaryGreen : AppColors.border,
-                      ),
-                    ),
-                    labelStyle: TextStyle(
-                      color: _selectedType == null ? AppColors.background : AppColors.textMain,
-                      fontWeight: FontWeight.w600,
-                      fontSize: 12,
-                    ),
-                    onSelected: (_) => setState(() => _selectedType = null),
-                  ),
-                  const SizedBox(width: AppDimensions.space8),
-                  ...AlertType.values.map((type) {
-                    final isSelected = _selectedType == type;
-                    return Padding(
-                      padding: const EdgeInsets.only(right: AppDimensions.space8),
-                      child: FilterChip(
-                        label: Text(type.label),
-                        selected: isSelected,
-                        showCheckmark: false,
-                        selectedColor: AppColors.primaryGreen,
-                        backgroundColor: AppColors.surface,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(AppDimensions.radiusSmall),
-                          side: BorderSide(
-                            color: isSelected ? AppColors.primaryGreen : AppColors.border,
-                          ),
-                        ),
-                        labelStyle: TextStyle(
-                          color: isSelected ? AppColors.background : AppColors.textMain,
-                          fontWeight: FontWeight.w600,
-                          fontSize: 12,
-                        ),
-                        onSelected: (selected) {
-                          setState(() => _selectedType = selected ? type : null);
-                        },
-                      ),
-                    );
-                  }),
-                ],
-              ),
-            ),
-            const Divider(color: AppColors.border, height: 1),
-
-            // Content List
-            Expanded(
-              child: RefreshIndicator(
-                color: AppColors.primaryGreen,
-                onRefresh: () async {
-                  await ref.read(alertsProvider.notifier).loadAlerts();
-                },
-                child: filtered.isEmpty
-                    ? ListView(
-                        physics: const AlwaysScrollableScrollPhysics(),
-                        children: [
-                          const SizedBox(height: 80),
-                          EmptyStateView(
-                            icon: LucideIcons.bell,
-                            title: 'No Notifications',
-                            description: _selectedType != null
-                                ? 'No alerts in category "${_selectedType!.label}".'
-                                : 'You are completely caught up! New deadline reminders, admit card notifications, and official corrigenda will appear here.',
-                          ),
-                        ],
-                      )
-                    : ListView.builder(
-                        physics: const AlwaysScrollableScrollPhysics(),
-                        padding: const EdgeInsets.all(AppDimensions.space16),
-                        itemCount: filtered.length,
-                        itemBuilder: (context, index) {
-                          final alert = filtered[index];
-                          final icon = _getIconForType(alert.type);
-                          final color = _getColorForType(alert.type);
-
-                          return InkWell(
-                            onTap: () {
-                              ref.read(alertsProvider.notifier).markAsRead(alert.id);
-                              if (alert.opportunityId != null) {
-                                context.push('/opportunities/${alert.opportunityId}');
-                              }
-                            },
-                            borderRadius: BorderRadius.circular(AppDimensions.radiusCard),
-                            child: Container(
-                              margin: const EdgeInsets.only(bottom: AppDimensions.space12),
-                              padding: const EdgeInsets.all(AppDimensions.space16),
-                              decoration: BoxDecoration(
-                                color: alert.isRead ? AppColors.surface : AppColors.secondarySurface,
-                                borderRadius: BorderRadius.circular(AppDimensions.radiusCard),
-                                border: Border.all(
-                                  color: alert.isRead
-                                      ? AppColors.border
-                                      : AppColors.primaryGreen.withValues(alpha: 0.4),
-                                  width: alert.isRead ? 1.0 : 1.5,
-                                ),
-                              ),
-                              child: Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  // Alert Type Icon
-                                  Container(
-                                    padding: const EdgeInsets.all(8),
-                                    decoration: BoxDecoration(
-                                      color: color.withValues(alpha: 0.12),
-                                      borderRadius: BorderRadius.circular(AppDimensions.radiusSmall),
-                                    ),
-                                    child: Icon(icon, size: 18, color: color),
-                                  ),
-                                  const SizedBox(width: AppDimensions.space12),
-
-                                  // Text Content
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Row(
-                                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                          children: [
-                                            Text(
-                                              alert.type.label,
-                                              style: TextStyle(
-                                                fontSize: 11,
-                                                fontWeight: FontWeight.w600,
-                                                color: color,
-                                              ),
-                                            ),
-                                            Text(
-                                              DateFormat('d MMM, HH:mm').format(alert.timestamp),
-                                              style: AppTypography.caption.copyWith(
-                                                fontSize: 10,
-                                                color: AppColors.textSubtle,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                        const SizedBox(height: 4),
-
-                                        // Title
-                                        Text(
-                                          alert.title,
-                                          style: TextStyle(
-                                            fontSize: 14,
-                                            fontWeight: alert.isRead ? FontWeight.w600 : FontWeight.bold,
-                                            color: AppColors.textMain,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 4),
-
-                                        // Message Body
-                                        Text(
-                                          alert.message,
-                                          style: AppTypography.caption.copyWith(
-                                            height: 1.4,
-                                            color: AppColors.textMuted,
-                                          ),
-                                        ),
-
-                                        if (alert.opportunityId != null) ...[
-                                          const SizedBox(height: 8),
-                                          const Row(
-                                            children: [
-                                              Text(
-                                                'View Examination',
-                                                style: TextStyle(
-                                                  fontSize: 11,
-                                                  color: AppColors.primaryGreen,
-                                                  fontWeight: FontWeight.bold,
-                                                ),
-                                              ),
-                                              SizedBox(width: 4),
-                                              Icon(LucideIcons.arrowRight, size: 12, color: AppColors.primaryGreen),
-                                            ],
-                                          ),
-                                        ],
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-              ),
-            ),
           ],
         ),
+        body: SafeArea(
+          child: Column(
+            children: [
+              // Filter Pills
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppDimensions.space16,
+                  vertical: AppDimensions.space8,
+                ),
+                child: Row(
+                  children: [
+                    FilterChip(
+                      label: const Text('All Alerts'),
+                      selected: _selectedType == null,
+                      showCheckmark: false,
+                      selectedColor: AppColors.primaryGreen,
+                      backgroundColor: context.themeCard,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(AppDimensions.radiusSmall),
+                        side: BorderSide(
+                          color: _selectedType == null ? AppColors.primaryGreen : context.themeBorder,
+                        ),
+                      ),
+                      labelStyle: TextStyle(
+                        color: _selectedType == null ? AppColors.white : context.themeTextMain,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 12,
+                      ),
+                      onSelected: (_) => setState(() => _selectedType = null),
+                    ),
+                    const SizedBox(width: AppDimensions.space8),
+                    ...AlertType.values.map((type) {
+                      final isSelected = _selectedType == type;
+                      return Padding(
+                        padding: const EdgeInsets.only(right: AppDimensions.space8),
+                        child: FilterChip(
+                          label: Text(type.label),
+                          selected: isSelected,
+                          showCheckmark: false,
+                          selectedColor: AppColors.primaryGreen,
+                          backgroundColor: context.themeCard,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(AppDimensions.radiusSmall),
+                            side: BorderSide(
+                              color: isSelected ? AppColors.primaryGreen : context.themeBorder,
+                            ),
+                          ),
+                          labelStyle: TextStyle(
+                            color: isSelected ? AppColors.white : context.themeTextMain,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 12,
+                          ),
+                          onSelected: (selected) {
+                            setState(() => _selectedType = selected ? type : null);
+                          },
+                        ),
+                      );
+                    }),
+                  ],
+                ),
+              ),
+              Divider(color: context.themeBorder, height: 1),
+
+              // Content List
+              Expanded(
+                child: RefreshIndicator(
+                  color: AppColors.primaryGreen,
+                  onRefresh: () async {
+                    await ref.read(alertsProvider.notifier).loadAlerts();
+                  },
+                  child: filtered.isEmpty
+                      ? ListView(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          children: [
+                            const SizedBox(height: 80),
+                            EmptyStateView(
+                              icon: LucideIcons.bell,
+                              title: 'No Notifications',
+                              description: _selectedType != null
+                                  ? 'No alerts in category "${_selectedType!.label}".'
+                                  : 'You are completely caught up! New deadline reminders, admit card notifications, and official corrigenda will appear here.',
+                            ),
+                          ],
+                        )
+                      : ListView.builder(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          padding: const EdgeInsets.all(AppDimensions.space16),
+                          itemCount: filtered.length,
+                          itemBuilder: (context, index) {
+                            final alert = filtered[index];
+                            final icon = _getIconForType(alert.type);
+                            final color = _getColorForType(alert.type);
+
+                            return InkWell(
+                              onTap: () {
+                                ref.read(alertsProvider.notifier).markAsRead(alert.id);
+                                if (alert.opportunityId != null) {
+                                  context.push('/opportunities/${alert.opportunityId}');
+                                }
+                              },
+                              borderRadius: BorderRadius.circular(AppDimensions.radiusCard),
+                              child: Container(
+                                margin: const EdgeInsets.only(bottom: AppDimensions.space12),
+                                padding: const EdgeInsets.all(AppDimensions.space16),
+                                decoration: BoxDecoration(
+                                  color: alert.isRead ? context.themeCard : context.themeSurfaceElevated,
+                                  borderRadius: BorderRadius.circular(AppDimensions.radiusCard),
+                                  border: Border.all(
+                                    color: alert.isRead
+                                        ? context.themeBorder
+                                        : AppColors.primaryGreen.withValues(alpha: 0.5),
+                                    width: alert.isRead ? 1.0 : 1.5,
+                                  ),
+                                ),
+                                child: Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    // Alert Type Icon
+                                    Container(
+                                      padding: const EdgeInsets.all(8),
+                                      decoration: BoxDecoration(
+                                        color: color.withValues(alpha: 0.12),
+                                        borderRadius: BorderRadius.circular(AppDimensions.radiusSmall),
+                                      ),
+                                      child: Icon(icon, size: 18, color: color),
+                                    ),
+                                    const SizedBox(width: AppDimensions.space12),
+
+                                    // Text Content
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Row(
+                                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                            children: [
+                                              Text(
+                                                alert.type.label,
+                                                style: TextStyle(
+                                                  fontSize: 11,
+                                                  fontWeight: FontWeight.w600,
+                                                  color: color,
+                                                ),
+                                              ),
+                                              Text(
+                                                DateFormat('d MMM, HH:mm').format(alert.timestamp),
+                                                style: AppTypography.caption.copyWith(
+                                                  fontSize: 10,
+                                                  color: context.themeTextSubtle,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                          const SizedBox(height: 4),
+
+                                          // Title
+                                          Text(
+                                            alert.title,
+                                            style: TextStyle(
+                                              fontSize: 14,
+                                              fontWeight: alert.isRead ? FontWeight.w600 : FontWeight.bold,
+                                              color: context.themeTextMain,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 4),
+
+                                          // Message Body
+                                          Text(
+                                            alert.message,
+                                            style: AppTypography.caption.copyWith(
+                                              height: 1.4,
+                                              color: context.themeTextMuted,
+                                            ),
+                                          ),
+
+                                          if (alert.opportunityId != null) ...[
+                                            const SizedBox(height: 8),
+                                            const Row(
+                                              children: [
+                                                Text(
+                                                  'View Examination',
+                                                  style: TextStyle(
+                                                    fontSize: 11,
+                                                    color: AppColors.primaryGreen,
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
+                                                ),
+                                                SizedBox(width: 4),
+                                                Icon(LucideIcons.arrowRight, size: 12, color: AppColors.primaryGreen),
+                                              ],
+                                            ),
+                                          ],
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
-    ),
-  );
-}
+    );
+  }
 }

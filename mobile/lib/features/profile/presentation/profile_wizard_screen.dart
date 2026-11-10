@@ -581,15 +581,15 @@ class _ProfileWizardScreenState extends ConsumerState<ProfileWizardScreen> {
           showDialog(
             context: context,
             builder: (ctx) => AlertDialog(
-              backgroundColor: AppColors.cardBackground,
+              backgroundColor: context.themeCard,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(AppDimensions.radiusCard),
-                side: const BorderSide(color: AppColors.border),
+                side: BorderSide(color: context.themeBorder),
               ),
-              title: const Text('Exit Setup?', style: TextStyle(color: AppColors.primaryText)),
-              content: const Text(
+              title: Text('Exit Setup?', style: TextStyle(color: context.themeTextMain)),
+              content: Text(
                 'Candidate profile setup is required to compute statutory examination eligibility.',
-                style: TextStyle(color: AppColors.secondaryText),
+                style: TextStyle(color: context.themeTextMuted),
               ),
               actions: [
                 TextButton(
@@ -609,19 +609,19 @@ class _ProfileWizardScreenState extends ConsumerState<ProfileWizardScreen> {
         }
       },
       child: Scaffold(
-        backgroundColor: AppColors.mainBackground,
+        backgroundColor: context.themeBackground,
         appBar: AppBar(
-          backgroundColor: AppColors.mainBackground,
+          backgroundColor: context.themeBackground,
           elevation: 0,
           leading: _currentStep > 0
               ? IconButton(
-                  icon: const Icon(LucideIcons.arrowLeft, color: AppColors.primaryText, size: 20),
+                  icon: Icon(LucideIcons.arrowLeft, color: context.themeTextMain, size: 20),
                   onPressed: _prevStep,
                 )
               : null,
           title: Text(
             'Candidate Onboarding',
-            style: AppTypography.screenTitle.copyWith(fontSize: 16),
+            style: AppTypography.screenTitle.copyWith(fontSize: 16, color: context.themeTextMain),
           ),
           actions: [
             Padding(
@@ -630,14 +630,14 @@ class _ProfileWizardScreenState extends ConsumerState<ProfileWizardScreen> {
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
-                    color: AppColors.elevatedSurface,
+                    color: context.themeSurfaceElevated,
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: AppColors.border),
+                    border: Border.all(color: context.themeBorder),
                   ),
                   child: Text(
                     'Step ${_currentStep + 1} of $_totalSteps',
-                    style: const TextStyle(
-                      color: AppColors.secondaryText,
+                    style: TextStyle(
+                      color: context.themeTextMuted,
                       fontSize: 11.5,
                       fontWeight: FontWeight.w600,
                     ),
@@ -648,9 +648,9 @@ class _ProfileWizardScreenState extends ConsumerState<ProfileWizardScreen> {
           ],
         ),
         body: _isLoadingInitial
-            ? const Center(
+            ? Center(
                 child: CircularProgressIndicator(
-                  color: AppColors.white,
+                  color: context.themeTextMain,
                   strokeWidth: 2,
                 ),
               )

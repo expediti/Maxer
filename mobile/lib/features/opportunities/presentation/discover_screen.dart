@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_dimensions.dart';
+import '../../../core/constants/branding.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/organisation_logo.dart';
@@ -66,11 +67,11 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
     final todayFormatted = DateFormat('EEEE, d MMMM yyyy').format(DateTime.now());
 
     return Scaffold(
-      backgroundColor: AppColors.mainBackground,
+      backgroundColor: context.themeBackground,
       body: SafeArea(
         child: RefreshIndicator(
           color: AppColors.primaryGreen,
-          backgroundColor: AppColors.elevatedSurface,
+          backgroundColor: context.themeSurfaceElevated,
           onRefresh: () async {
             ref.invalidate(recommendedOpportunitiesProvider);
             ref.invalidate(closingSoonOpportunitiesProvider);
@@ -98,33 +99,15 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
                         children: [
                           Row(
                             children: [
-                              Container(
-                                width: 32,
-                                height: 32,
-                                decoration: BoxDecoration(
-                                  color: AppColors.elevatedSurface,
-                                  borderRadius: AppDimensions.roundedSmall,
-                                  border: Border.all(color: AppColors.borders),
-                                ),
-                                child: Center(
-                                  child: Container(
-                                    width: 10,
-                                    height: 10,
-                                    decoration: const BoxDecoration(
-                                      shape: BoxShape.circle,
-                                      color: AppColors.primaryGreen,
-                                    ),
-                                  ),
-                                ),
-                              ),
+                              AppBranding.logoImage(size: 32),
                               const SizedBox(width: AppDimensions.space8),
                               Text(
-                                'REXAM',
+                                AppBranding.brandName,
                                 style: AppTypography.brandTitle.copyWith(
                                   fontSize: 18,
                                   letterSpacing: 2.5,
                                   fontWeight: FontWeight.w800,
-                                  color: AppColors.mainText,
+                                  color: Theme.of(context).colorScheme.onSurface,
                                 ),
                               ),
                             ],
@@ -135,7 +118,7 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
                               Stack(
                                 children: [
                                   IconButton(
-                                    icon: const Icon(LucideIcons.bell, size: 20, color: AppColors.mainText),
+                                    icon: Icon(LucideIcons.bell, size: 20, color: context.themeTextMain),
                                     onPressed: () => context.push('/alerts'),
                                     tooltip: 'Notification Center',
                                   ),
@@ -177,21 +160,27 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
                                         : (authState.user?.displayName?.isNotEmpty == true
                                             ? authState.user!.displayName![0]
                                             : 'R');
+                                    final avatarUrl = profile.avatarUrl;
                                     return CircleAvatar(
                                       radius: 17,
-                                      backgroundColor: AppColors.elevatedSurface,
-                                      child: Text(
-                                        initials.toUpperCase(),
-                                        style: const TextStyle(
-                                          color: AppColors.primaryGreen,
-                                          fontWeight: FontWeight.w700,
-                                          fontSize: 12,
-                                        ),
-                                      ),
+                                      backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+                                      backgroundImage: (avatarUrl != null && avatarUrl.isNotEmpty)
+                                          ? NetworkImage(avatarUrl) as ImageProvider
+                                          : null,
+                                      child: (avatarUrl == null || avatarUrl.isEmpty)
+                                          ? Text(
+                                              initials.toUpperCase(),
+                                              style: TextStyle(
+                                                color: Theme.of(context).colorScheme.onPrimaryContainer,
+                                                fontWeight: FontWeight.w700,
+                                                fontSize: 12,
+                                              ),
+                                            )
+                                          : null,
                                     );
                                   },
-                                  loading: () => const CircleAvatar(radius: 17, backgroundColor: AppColors.elevatedSurface),
-                                  error: (err, stack) => const CircleAvatar(radius: 17, backgroundColor: AppColors.elevatedSurface),
+                                  loading: () => CircleAvatar(radius: 17, backgroundColor: context.themeSurfaceElevated),
+                                  error: (err, stack) => CircleAvatar(radius: 17, backgroundColor: context.themeSurfaceElevated),
                                 ),
                               ),
                             ],
@@ -210,25 +199,25 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
                               style: AppTypography.screenTitle.copyWith(
                                 fontSize: 22,
                                 fontWeight: FontWeight.w700,
-                                color: AppColors.mainText,
+                                color: context.themeTextMain,
                               ),
                             ),
                             const SizedBox(height: 2),
                             Text(
                               todayFormatted,
                               style: AppTypography.caption.copyWith(
-                                color: AppColors.secondaryText,
+                                color: context.themeTextMuted,
                               ),
                             ),
                           ],
                         ),
                         loading: () => Text(
                           'Welcome to REXAM',
-                          style: AppTypography.screenTitle.copyWith(color: AppColors.mainText),
+                          style: AppTypography.screenTitle.copyWith(color: context.themeTextMain),
                         ),
                         error: (err, stack) => Text(
                           'Welcome to REXAM',
-                          style: AppTypography.screenTitle.copyWith(color: AppColors.mainText),
+                          style: AppTypography.screenTitle.copyWith(color: context.themeTextMain),
                         ),
                       ),
                       const SizedBox(height: AppDimensions.space16),
@@ -238,12 +227,12 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
                         controller: _searchController,
                         textInputAction: TextInputAction.search,
                         onSubmitted: _onSearchSubmitted,
-                        style: const TextStyle(color: AppColors.mainText),
+                        style: TextStyle(color: context.themeTextMain),
                         decoration: InputDecoration(
                           hintText: 'Search exams, organisations, posts...',
-                          prefixIcon: const Icon(LucideIcons.search, size: 18, color: AppColors.secondaryText),
+                          prefixIcon: Icon(LucideIcons.search, size: 18, color: context.themeTextMuted),
                           suffixIcon: IconButton(
-                            icon: const Icon(LucideIcons.slidersHorizontal, size: 16, color: AppColors.secondaryText),
+                            icon: Icon(LucideIcons.slidersHorizontal, size: 16, color: context.themeTextMuted),
                             onPressed: () => context.go('/explorer'),
                           ),
                         ),
@@ -310,7 +299,7 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
                   children: [
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: AppDimensions.space16, vertical: 4),
-                      child: Text('Quick Access', style: AppTypography.sectionHeader.copyWith(color: AppColors.mainText)),
+                      child: Text('Quick Access', style: AppTypography.sectionHeader.copyWith(color: context.themeTextMain)),
                     ),
                     SingleChildScrollView(
                       scrollDirection: Axis.horizontal,
@@ -343,7 +332,7 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
                         children: [
                           Container(width: 3, height: 16, color: AppColors.warning),
                           const SizedBox(width: AppDimensions.space8),
-                          Text('Upcoming Deadlines', style: AppTypography.sectionHeader.copyWith(color: AppColors.mainText)),
+                          Text('Upcoming Deadlines', style: AppTypography.sectionHeader.copyWith(color: context.themeTextMain)),
                         ],
                       ),
                       TextButton(
@@ -357,12 +346,12 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
               closingSoonAsync.when(
                 data: (deadlines) {
                   if (deadlines.isEmpty) {
-                    return const SliverToBoxAdapter(
+                    return SliverToBoxAdapter(
                       child: Padding(
-                        padding: EdgeInsets.symmetric(horizontal: AppDimensions.space16, vertical: 8),
+                        padding: const EdgeInsets.symmetric(horizontal: AppDimensions.space16, vertical: 8),
                         child: Text(
                           'No upcoming verified deadlines at this time.',
-                          style: TextStyle(color: AppColors.mutedText, fontSize: 13),
+                          style: TextStyle(color: context.themeTextMuted, fontSize: 13),
                         ),
                       ),
                     );
@@ -385,10 +374,10 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
                             margin: const EdgeInsets.only(right: AppDimensions.space12),
                             padding: const EdgeInsets.all(AppDimensions.space12),
                             decoration: BoxDecoration(
-                              color: AppColors.elevatedSurface,
+                              color: context.themeSurfaceElevated,
                               borderRadius: AppDimensions.roundedDefault,
                               border: Border.all(
-                                color: isUrgent ? AppColors.warning : AppColors.borders,
+                                color: isUrgent ? AppColors.warning : context.themeBorder,
                               ),
                             ),
                             child: Column(
@@ -443,10 +432,10 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
                                   opp.title,
                                   maxLines: 2,
                                   overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontWeight: FontWeight.w600,
                                     fontSize: 13,
-                                    color: AppColors.mainText,
+                                    color: context.themeTextMain,
                                   ),
                                 ),
                                 Row(
@@ -454,7 +443,7 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
                                   children: [
                                     Text(
                                       deadline != null ? DateFormat('d MMM yyyy').format(deadline) : 'TBA',
-                                      style: AppTypography.caption.copyWith(color: AppColors.secondaryText),
+                                      style: AppTypography.caption.copyWith(color: context.themeTextMuted),
                                     ),
                                     InkWell(
                                       onTap: () => context.push('/opportunities/${opp.id}'),
@@ -499,7 +488,7 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
                         children: [
                           Container(width: 3, height: 16, color: AppColors.primaryGreen),
                           const SizedBox(width: AppDimensions.space8),
-                          Text('Recommended for You', style: AppTypography.sectionHeader.copyWith(color: AppColors.mainText)),
+                          Text('Recommended for You', style: AppTypography.sectionHeader.copyWith(color: context.themeTextMain)),
                         ],
                       ),
                       TextButton(
@@ -570,7 +559,7 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
                         children: [
                           Container(width: 3, height: 16, color: AppColors.info),
                           const SizedBox(width: AppDimensions.space8),
-                          Text('Recently Updated', style: AppTypography.sectionHeader.copyWith(color: AppColors.mainText)),
+                          Text('Recently Updated', style: AppTypography.sectionHeader.copyWith(color: context.themeTextMain)),
                         ],
                       ),
                       TextButton(
@@ -584,10 +573,10 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
               recentlyUpdatedAsync.when(
                 data: (recent) {
                   if (recent.isEmpty) {
-                    return const SliverToBoxAdapter(
+                    return SliverToBoxAdapter(
                       child: Padding(
-                        padding: EdgeInsets.symmetric(horizontal: AppDimensions.space16, vertical: 8),
-                        child: Text('No recently updated examinations at this time.', style: TextStyle(color: AppColors.mutedText, fontSize: 13)),
+                        padding: const EdgeInsets.symmetric(horizontal: AppDimensions.space16, vertical: 8),
+                        child: Text('No recently updated examinations at this time.', style: TextStyle(color: context.themeTextMuted, fontSize: 13)),
                       ),
                     );
                   }
@@ -646,9 +635,9 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
           vertical: AppDimensions.space12,
         ),
         decoration: BoxDecoration(
-          color: AppColors.elevatedSurface,
+          color: context.themeSurfaceElevated,
           borderRadius: AppDimensions.roundedDefault,
-          border: Border.all(color: AppColors.borders),
+          border: Border.all(color: context.themeBorder),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -662,7 +651,7 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
                   style: AppTypography.screenTitle.copyWith(
                     fontSize: 16,
                     fontWeight: FontWeight.w700,
-                    color: AppColors.mainText,
+                    color: context.themeTextMain,
                   ),
                 ),
               ],
@@ -673,7 +662,7 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: AppTypography.caption.copyWith(
-                color: AppColors.secondaryText,
+                color: context.themeTextMuted,
                 fontSize: 11,
               ),
             ),
@@ -684,18 +673,20 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
   }
 
   Widget _buildQuickShortcut(String label, String tag) {
-    return Padding(
-      padding: const EdgeInsets.only(right: AppDimensions.space8),
-      child: ActionChip(
-        label: Text(label),
-        backgroundColor: AppColors.secondarySurface,
-        labelStyle: AppTypography.caption.copyWith(
-          color: AppColors.mainText,
-          fontWeight: FontWeight.w600,
+    return Builder(builder: (ctx) {
+      return Padding(
+        padding: const EdgeInsets.only(right: AppDimensions.space8),
+        child: ActionChip(
+          label: Text(label),
+          backgroundColor: ctx.themeSurfaceElevated,
+          labelStyle: AppTypography.caption.copyWith(
+            color: ctx.themeTextMain,
+            fontWeight: FontWeight.w600,
+          ),
+          side: BorderSide(color: ctx.themeBorder),
+          onPressed: () => _onQuickAccessTapped(tag),
         ),
-        side: const BorderSide(color: AppColors.borders),
-        onPressed: () => _onQuickAccessTapped(tag),
-      ),
-    );
+      );
+    });
   }
 }

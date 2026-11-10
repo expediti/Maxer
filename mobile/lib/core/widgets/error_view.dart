@@ -40,19 +40,19 @@ class ErrorView extends StatelessWidget {
             Text(
               title,
               textAlign: TextAlign.center,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
-                color: AppColors.textMain,
+                color: context.themeTextMain,
               ),
             ),
             const SizedBox(height: AppDimensions.space8),
             Text(
               message,
               textAlign: TextAlign.center,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 13,
-                color: AppColors.textMuted,
+                color: context.themeTextMuted,
                 height: 1.4,
               ),
             ),
@@ -64,8 +64,8 @@ class ErrorView extends StatelessWidget {
                 label: const Text('Try Again'),
                 style: OutlinedButton.styleFrom(
                   minimumSize: const Size(140, 42),
-                  side: const BorderSide(color: AppColors.border),
-                  foregroundColor: AppColors.textMain,
+                  side: BorderSide(color: context.themeBorder),
+                  foregroundColor: context.themeTextMain,
                 ),
               ),
             ],

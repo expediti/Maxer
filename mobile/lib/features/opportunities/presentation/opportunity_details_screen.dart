@@ -8,12 +8,14 @@ import 'package:rexam/core/constants/app_colors.dart';
 import 'package:rexam/core/constants/app_dimensions.dart';
 import 'package:rexam/core/theme/app_typography.dart';
 import 'package:rexam/core/utils/currency_formatter.dart';
+import 'package:rexam/core/utils/date_formatter.dart';
 import 'package:rexam/core/utils/url_launcher_helper.dart';
 import 'package:rexam/core/widgets/empty_state.dart';
 import 'package:rexam/core/widgets/organisation_logo.dart';
 import 'package:rexam/models/application_tracker.dart';
 import 'package:rexam/features/applications/presentation/providers/applications_provider.dart';
 import 'package:rexam/features/saved/presentation/providers/saved_provider.dart';
+import 'package:rexam/features/reminders/presentation/providers/reminders_provider.dart';
 import 'package:rexam/features/opportunities/domain/opportunity.dart';
 import 'package:rexam/features/opportunities/presentation/providers/opportunities_provider.dart';
 import 'package:rexam/features/opportunities/presentation/widgets/status_badge.dart';
@@ -38,30 +40,30 @@ class OpportunityDetailsScreen extends ConsumerWidget {
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) => AlertDialog(
-          backgroundColor: AppColors.cardBackground,
+          backgroundColor: ctx.themeCard,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(AppDimensions.radiusCard),
-            side: const BorderSide(color: AppColors.border),
+            side: BorderSide(color: ctx.themeBorder),
           ),
           title: Text(
             'Track Application Stage',
-            style: AppTypography.screenTitle.copyWith(fontSize: 18),
+            style: AppTypography.screenTitle.copyWith(fontSize: 18, color: ctx.themeTextMain),
           ),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
+                Text(
                   'Record your application progress in your Rexam profile. Note that Rexam is an opportunity intelligence platform and does not submit forms on your behalf.',
-                  style: TextStyle(color: AppColors.secondaryText, fontSize: 12.5, height: 1.4),
+                  style: TextStyle(color: ctx.themeTextMuted, fontSize: 12.5, height: 1.4),
                 ),
                 const SizedBox(height: AppDimensions.space16),
 
                 DropdownButtonFormField<ApplicationStatus>(
                   initialValue: selectedStatus,
-                  dropdownColor: AppColors.elevatedSurface,
-                  style: const TextStyle(color: AppColors.primaryText, fontSize: 13),
+                  dropdownColor: ctx.themeSurfaceElevated,
+                  style: TextStyle(color: ctx.themeTextMain, fontSize: 13),
                   decoration: const InputDecoration(
                     labelText: 'Current Stage',
                     prefixIcon: Icon(LucideIcons.clipboardCheck, size: 18),
@@ -71,7 +73,7 @@ class OpportunityDetailsScreen extends ConsumerWidget {
                       value: status,
                       child: Text(
                         status.label,
-                        style: const TextStyle(fontSize: 13, color: AppColors.primaryText),
+                        style: TextStyle(fontSize: 13, color: ctx.themeTextMain),
                       ),
                     );
                   }).toList(),
@@ -83,7 +85,7 @@ class OpportunityDetailsScreen extends ConsumerWidget {
 
                 TextField(
                   controller: appNumberController,
-                  style: const TextStyle(color: AppColors.primaryText, fontSize: 13),
+                  style: TextStyle(color: ctx.themeTextMain, fontSize: 13),
                   decoration: const InputDecoration(
                     labelText: 'Roll No / Registration ID (Optional)',
                     prefixIcon: Icon(LucideIcons.hash, size: 18),
@@ -94,7 +96,7 @@ class OpportunityDetailsScreen extends ConsumerWidget {
                 TextField(
                   controller: notesController,
                   maxLines: 2,
-                  style: const TextStyle(color: AppColors.primaryText, fontSize: 13),
+                  style: TextStyle(color: ctx.themeTextMain, fontSize: 13),
                   decoration: const InputDecoration(
                     labelText: 'Personal Notes / Checklist (Optional)',
                     prefixIcon: Icon(LucideIcons.fileText, size: 18),
@@ -106,7 +108,7 @@ class OpportunityDetailsScreen extends ConsumerWidget {
           actions: [
             TextButton(
               onPressed: () => Navigator.of(ctx).pop(),
-              child: const Text('Cancel', style: TextStyle(color: AppColors.secondaryText)),
+              child: Text('Cancel', style: TextStyle(color: ctx.themeTextMuted)),
             ),
             ElevatedButton(
               onPressed: () {
@@ -121,13 +123,13 @@ class OpportunityDetailsScreen extends ConsumerWidget {
                   SnackBar(
                     content: Text(
                       'Tracking updated: ${selectedStatus.label}',
-                      style: const TextStyle(color: AppColors.primaryText),
+                      style: TextStyle(color: ctx.themeTextMain),
                     ),
-                    backgroundColor: AppColors.cardBackground,
+                    backgroundColor: ctx.themeCard,
                     behavior: SnackBarBehavior.floating,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(8),
-                      side: const BorderSide(color: AppColors.border),
+                      side: BorderSide(color: ctx.themeBorder),
                     ),
                   ),
                 );
@@ -144,16 +146,18 @@ class OpportunityDetailsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final opportunityAsync = ref.watch(opportunityDetailProvider(opportunityId));
     final savedList = ref.watch(savedProvider);
+    final remindersSet = ref.watch(remindersProvider);
     final isSaved = savedList.any((o) => o.id == opportunityId || o.slug == opportunityId);
 
     return opportunityAsync.when(
       data: (opportunity) {
         if (opportunity == null) {
           return Scaffold(
-            backgroundColor: AppColors.mainBackground,
+            backgroundColor: context.themeBackground,
             appBar: AppBar(
+              backgroundColor: context.themeBackground,
               leading: IconButton(
-                icon: const Icon(LucideIcons.arrowLeft, color: AppColors.primaryText),
+                icon: Icon(LucideIcons.arrowLeft, color: context.themeTextMain),
                 onPressed: () => context.pop(),
               ),
             ),
@@ -178,12 +182,12 @@ class OpportunityDetailsScreen extends ConsumerWidget {
             }
           },
           child: Scaffold(
-            backgroundColor: AppColors.mainBackground,
+            backgroundColor: context.themeBackground,
             appBar: AppBar(
-              backgroundColor: AppColors.mainBackground,
+              backgroundColor: context.themeBackground,
               elevation: 0,
               leading: IconButton(
-                icon: const Icon(LucideIcons.arrowLeft, color: AppColors.primaryText, size: 20),
+                icon: Icon(LucideIcons.arrowLeft, color: context.themeTextMain, size: 20),
                 onPressed: () {
                   if (context.canPop()) {
                     context.pop();
@@ -194,14 +198,40 @@ class OpportunityDetailsScreen extends ConsumerWidget {
               ),
               title: Text(
                 opportunity.organisation,
-                style: AppTypography.screenTitle.copyWith(fontSize: 16),
+                style: AppTypography.screenTitle.copyWith(fontSize: 16, color: context.themeTextMain),
                 overflow: TextOverflow.ellipsis,
               ),
               actions: [
+                Builder(
+                  builder: (ctx) {
+                    final isReminded = remindersSet.contains(opportunity.id);
+                    return IconButton(
+                      icon: Icon(
+                        isReminded ? LucideIcons.bellRing : LucideIcons.bell,
+                        color: isReminded ? AppColors.primaryGreen : context.themeTextMuted,
+                        size: 20,
+                      ),
+                      tooltip: isReminded ? 'Reminders Active' : 'Remind Me (Key Dates & Deadlines)',
+                      onPressed: () {
+                        ref.read(remindersProvider.notifier).toggleReminder(opportunity);
+                        ScaffoldMessenger.of(ctx).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              isReminded
+                                  ? 'Reminders disabled for ${opportunity.title}'
+                                  : 'Reminders enabled (7d, 3d, 2d, 24h & Exam Date in IST)',
+                            ),
+                            duration: const Duration(seconds: 2),
+                          ),
+                        );
+                      },
+                    );
+                  },
+                ),
                 IconButton(
                   icon: Icon(
                     isSaved ? LucideIcons.bookmarkCheck : LucideIcons.bookmark,
-                    color: isSaved ? AppColors.white : AppColors.secondaryText,
+                    color: isSaved ? (context.isDarkMode ? AppColors.white : AppColors.black) : context.themeTextMuted,
                     size: 20,
                   ),
                   tooltip: isSaved ? 'Bookmarked' : 'Save Opportunity',
@@ -223,9 +253,9 @@ class OpportunityDetailsScreen extends ConsumerWidget {
                   Container(
                     padding: const EdgeInsets.all(AppDimensions.space16),
                     decoration: BoxDecoration(
-                      color: AppColors.cardBackground,
+                      color: context.themeCard,
                       borderRadius: BorderRadius.circular(AppDimensions.radiusCard),
-                      border: Border.all(color: AppColors.border),
+                      border: Border.all(color: context.themeBorder),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -245,36 +275,40 @@ class OpportunityDetailsScreen extends ConsumerWidget {
                                 Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                                   decoration: BoxDecoration(
-                                    color: AppColors.elevatedSurface,
+                                    color: context.themeSurfaceElevated,
                                     borderRadius: BorderRadius.circular(AppDimensions.radiusSmall),
-                                    border: Border.all(color: AppColors.border),
+                                    border: Border.all(color: context.themeBorder),
                                   ),
                                   child: Text(
                                     opportunity.category.label,
-                                    style: const TextStyle(
-                                      color: AppColors.secondaryText,
+                                    style: TextStyle(
+                                      color: context.themeTextMuted,
                                       fontWeight: FontWeight.w600,
                                       fontSize: 11,
                                     ),
                                   ),
                                 ),
+                                VerificationTierBadge(
+                                  tier: opportunity.verificationTier,
+                                  isCompact: true,
+                                ),
                                 if (opportunity.vacancies != null)
                                   Container(
                                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                                     decoration: BoxDecoration(
-                                      color: AppColors.elevatedSurface,
+                                      color: context.themeSurfaceElevated,
                                       borderRadius: BorderRadius.circular(AppDimensions.radiusSmall),
-                                      border: Border.all(color: AppColors.border),
+                                      border: Border.all(color: context.themeBorder),
                                     ),
                                     child: Row(
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
-                                        const Icon(LucideIcons.users, size: 12, color: AppColors.secondaryText),
+                                        Icon(LucideIcons.users, size: 12, color: context.themeTextMuted),
                                         const SizedBox(width: 4),
                                         Text(
                                           '${opportunity.vacancies} Posts',
-                                          style: const TextStyle(
-                                            color: AppColors.primaryText,
+                                          style: TextStyle(
+                                            color: context.themeTextMain,
                                             fontWeight: FontWeight.w700,
                                             fontSize: 11,
                                           ),
@@ -314,13 +348,14 @@ class OpportunityDetailsScreen extends ConsumerWidget {
                                       fontSize: 18,
                                       fontWeight: FontWeight.w700,
                                       height: 1.25,
+                                      color: context.themeTextMain,
                                     ),
                                   ),
                                   const SizedBox(height: AppDimensions.space6),
                                   Text(
                                     '${opportunity.organisation} • ${opportunity.issuingAuthority}',
                                     style: AppTypography.caption.copyWith(
-                                      color: AppColors.secondaryText,
+                                      color: context.themeTextMuted,
                                       fontSize: 12,
                                     ),
                                   ),
@@ -334,15 +369,15 @@ class OpportunityDetailsScreen extends ConsumerWidget {
                         // Location & Pay Scale
                         Row(
                           children: [
-                            const Icon(LucideIcons.mapPin, size: 14, color: AppColors.secondaryText),
+                            Icon(LucideIcons.mapPin, size: 14, color: context.themeTextMuted),
                             const SizedBox(width: 6),
                             Text(
                               opportunity.location,
-                              style: AppTypography.caption.copyWith(color: AppColors.primaryText),
+                              style: AppTypography.caption.copyWith(color: context.themeTextMain),
                             ),
                             if (opportunity.salaryOrPayScale != null) ...[
                               const SizedBox(width: AppDimensions.space16),
-                              const Icon(LucideIcons.wallet, size: 14, color: AppColors.secondaryText),
+                              Icon(LucideIcons.wallet, size: 14, color: context.themeTextMuted),
                               const SizedBox(width: 6),
                               Expanded(
                                 child: Text(
@@ -350,7 +385,7 @@ class OpportunityDetailsScreen extends ConsumerWidget {
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                   style: AppTypography.caption.copyWith(
-                                    color: AppColors.primaryText,
+                                    color: context.themeTextMain,
                                     fontWeight: FontWeight.w600,
                                   ),
                                 ),
@@ -365,70 +400,133 @@ class OpportunityDetailsScreen extends ConsumerWidget {
 
                   // Statutory Eligibility Assessment Card
                   reportAsync.when(
-                    data: (rep) => _buildEligibilityCard(context, rep),
+                    data: (rep) => _buildEligibilityCard(context, rep, opportunity),
                     loading: () => Container(
                       padding: const EdgeInsets.all(AppDimensions.space16),
                       decoration: BoxDecoration(
-                        color: AppColors.cardBackground,
+                        color: context.themeCard,
                         borderRadius: BorderRadius.circular(AppDimensions.radiusCard),
-                        border: Border.all(color: AppColors.border),
+                        border: Border.all(color: context.themeBorder),
                       ),
-                      child: const Row(
+                      child: Row(
                         children: [
                           SizedBox(
                             width: 16,
                             height: 16,
-                            child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.white),
+                            child: CircularProgressIndicator(strokeWidth: 2, color: context.themeTextMain),
                           ),
-                          SizedBox(width: AppDimensions.space12),
-                          Text('Evaluating statutory eligibility...', style: TextStyle(color: AppColors.secondaryText, fontSize: 12)),
+                          const SizedBox(width: AppDimensions.space12),
+                          Text('Evaluating statutory eligibility...', style: TextStyle(color: context.themeTextMuted, fontSize: 12)),
                         ],
                       ),
                     ),
                     error: (err, _) => Container(
                       padding: const EdgeInsets.all(AppDimensions.space16),
                       decoration: BoxDecoration(
-                        color: AppColors.cardBackground,
+                        color: context.themeCard,
                         borderRadius: BorderRadius.circular(AppDimensions.radiusCard),
-                        border: Border.all(color: AppColors.border),
+                        border: Border.all(color: context.themeBorder),
                       ),
-                      child: const Text('Eligibility evaluation currently unavailable.', style: TextStyle(color: AppColors.secondaryText, fontSize: 12)),
+                      child: Text('Eligibility evaluation currently unavailable.', style: TextStyle(color: context.themeTextMuted, fontSize: 12)),
                     ),
                   ),
-                  const SizedBox(height: AppDimensions.space20),
+                  const SizedBox(height: AppDimensions.space16),
+
+                  // User-Controlled Examination Reminders Banner
+                  Builder(
+                    builder: (ctx) {
+                      final isReminded = remindersSet.contains(opportunity.id);
+                      return Container(
+                        padding: const EdgeInsets.symmetric(horizontal: AppDimensions.space16, vertical: AppDimensions.space12),
+                        decoration: BoxDecoration(
+                          color: isReminded ? AppColors.greenTint : context.themeCard,
+                          borderRadius: BorderRadius.circular(AppDimensions.radiusCard),
+                          border: Border.all(
+                            color: isReminded ? AppColors.primaryGreen.withValues(alpha: 0.5) : context.themeBorder,
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              isReminded ? LucideIcons.bellRing : LucideIcons.bell,
+                              size: 20,
+                              color: isReminded ? AppColors.primaryGreen : context.themeTextMuted,
+                            ),
+                            const SizedBox(width: AppDimensions.space12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    isReminded ? 'Deadline Reminders Active' : 'User-Controlled Reminders',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 13,
+                                      color: isReminded ? AppColors.primaryGreen : ctx.themeTextMain,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    isReminded
+                                        ? 'Alarms scheduled for 7d, 3d, 2d, 24h before closing & exam date in IST.'
+                                        : 'Separate from Save. Tap to get verified date & deadline alerts in IST.',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: ctx.themeTextMuted,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Switch(
+                              value: isReminded,
+                              activeColor: AppColors.primaryGreen,
+                              onChanged: (val) {
+                                ref.read(remindersProvider.notifier).toggleReminder(opportunity);
+                              },
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                  const SizedBox(height: AppDimensions.space16),
 
                   // Important Dates: Visually Structured Timeline
-                  _buildSectionHeader('Official Schedule & Deadlines', LucideIcons.calendar),
+                  _buildSectionHeader(context, 'Official Schedule & Deadlines', LucideIcons.calendar),
                   const SizedBox(height: AppDimensions.space8),
-                  _buildStructuredTimeline(opportunity),
+                  _buildStructuredTimeline(context, opportunity),
                   const SizedBox(height: AppDimensions.space20),
 
                   // Statutory Eligibility Criteria
-                  _buildSectionHeader('Statutory Eligibility Criteria', LucideIcons.shieldCheck),
+                  _buildSectionHeader(context, 'Statutory Eligibility Criteria', LucideIcons.shieldCheck),
                   const SizedBox(height: AppDimensions.space8),
                   Container(
                     padding: const EdgeInsets.all(AppDimensions.space16),
                     decoration: BoxDecoration(
-                      color: AppColors.cardBackground,
+                      color: context.themeCard,
                       borderRadius: BorderRadius.circular(AppDimensions.radiusCard),
-                      border: Border.all(color: AppColors.border),
+                      border: Border.all(color: context.themeBorder),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         _buildCriterionRow(
+                          context,
                           'Age Limit Norms',
                           '${opportunity.minAge ?? 18} to ${opportunity.maxAge ?? 32} years (Category relaxations apply as per gazette)',
                         ),
                         _buildCriterionRow(
+                          context,
                           'Prescribed Qualifications',
                           opportunity.educationalQualifications.isNotEmpty
                               ? opportunity.educationalQualifications.join('\n')
                               : 'Refer to official gazette notification.',
                         ),
                         if (opportunity.eligibleStreams.isNotEmpty)
-                          _buildCriterionRow('Eligible Disciplines / Branches', opportunity.eligibleStreams.join(', ')),
+                          _buildCriterionRow(context, 'Eligible Disciplines / Branches', opportunity.eligibleStreams.join(', ')),
                         _buildCriterionRow(
+                          context,
                           'Academic Score Requirement',
                           opportunity.minPercentage != null && opportunity.minCgpa != null
                               ? 'Minimum ${opportunity.minPercentage!.toStringAsFixed(1)}% marks or ${opportunity.minCgpa!.toStringAsFixed(2)} CGPA'
@@ -438,27 +536,27 @@ class OpportunityDetailsScreen extends ConsumerWidget {
                                       ? 'Minimum ${opportunity.minPercentage!.toStringAsFixed(1)}% aggregate marks'
                                       : 'Passing marks in qualifying degree')),
                         ),
-                        _buildCriterionRow('Nationality Requirement', opportunity.nationality),
-                        _buildCriterionRow('Prior Work Experience', opportunity.workExperience),
+                        _buildCriterionRow(context, 'Nationality Requirement', opportunity.nationality),
+                        _buildCriterionRow(context, 'Prior Work Experience', opportunity.workExperience),
                       ],
                     ),
                   ),
                   const SizedBox(height: AppDimensions.space20),
 
                   // Overview & Scope
-                  _buildSectionHeader('Overview & Scope', LucideIcons.fileText),
+                  _buildSectionHeader(context, 'Overview & Scope', LucideIcons.fileText),
                   const SizedBox(height: AppDimensions.space8),
                   Container(
                     padding: const EdgeInsets.all(AppDimensions.space16),
                     decoration: BoxDecoration(
-                      color: AppColors.cardBackground,
+                      color: context.themeCard,
                       borderRadius: BorderRadius.circular(AppDimensions.radiusCard),
-                      border: Border.all(color: AppColors.border),
+                      border: Border.all(color: context.themeBorder),
                     ),
                     child: Text(
                       opportunity.overview.isNotEmpty ? opportunity.overview : 'No description provided.',
                       style: AppTypography.body.copyWith(
-                        color: AppColors.primaryText,
+                        color: context.themeTextMain,
                         height: 1.5,
                         fontSize: 13,
                       ),
@@ -467,14 +565,14 @@ class OpportunityDetailsScreen extends ConsumerWidget {
                   const SizedBox(height: AppDimensions.space20),
 
                   // Application Fee Details
-                  _buildSectionHeader('Application Fee & Concessions', LucideIcons.wallet),
+                  _buildSectionHeader(context, 'Application Fee & Concessions', LucideIcons.wallet),
                   const SizedBox(height: AppDimensions.space8),
                   Container(
                     padding: const EdgeInsets.all(AppDimensions.space16),
                     decoration: BoxDecoration(
-                      color: AppColors.cardBackground,
+                      color: context.themeCard,
                       borderRadius: BorderRadius.circular(AppDimensions.radiusCard),
-                      border: Border.all(color: AppColors.border),
+                      border: Border.all(color: context.themeBorder),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -482,93 +580,129 @@ class OpportunityDetailsScreen extends ConsumerWidget {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            const Text(
+                            Text(
                               'Standard Application Fee:',
-                              style: TextStyle(color: AppColors.secondaryText, fontSize: 13),
+                              style: TextStyle(color: context.themeTextMuted, fontSize: 13),
                             ),
                             Text(
                               CurrencyFormatter.format(opportunity.applicationFee),
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontWeight: FontWeight.w700,
-                                fontSize: 15,
-                                color: AppColors.primaryText,
+                                fontSize: 14,
+                                color: context.themeTextMain,
                               ),
                             ),
                           ],
                         ),
-                        const SizedBox(height: AppDimensions.space12),
-                        const Divider(color: AppColors.border, height: 1),
-                        const SizedBox(height: AppDimensions.space12),
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Icon(LucideIcons.info, size: 14, color: AppColors.secondaryText),
-                            const SizedBox(width: AppDimensions.space8),
-                            Expanded(
-                              child: Text(
-                                'Fee Exemptions: ${opportunity.feeExemptions.isNotEmpty ? opportunity.feeExemptions : "SC/ST/PwBD and Female candidates exempted."}',
-                                style: const TextStyle(color: AppColors.secondaryText, fontSize: 12, height: 1.4),
-                              ),
+                        if (opportunity.feeExemptions.isNotEmpty) ...[
+                          const SizedBox(height: AppDimensions.space8),
+                          Divider(color: context.themeBorder, height: 1),
+                          const SizedBox(height: AppDimensions.space8),
+                          Text(
+                            'Exemptions & Concessions: ${opportunity.feeExemptions}',
+                            style: TextStyle(
+                              color: context.themeTextMuted,
+                              fontSize: 12,
+                              height: 1.35,
                             ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ],
                     ),
                   ),
                   const SizedBox(height: AppDimensions.space20),
 
-                  // Official Sources & Verified Documents
-                  _buildSectionHeader('Official Sources & Documents', LucideIcons.externalLink),
+                  // Selection Procedure & Stages
+                  _buildSectionHeader(context, 'Selection Process', LucideIcons.gitFork),
                   const SizedBox(height: AppDimensions.space8),
                   Container(
+                    padding: const EdgeInsets.all(AppDimensions.space16),
                     decoration: BoxDecoration(
-                      color: AppColors.cardBackground,
+                      color: context.themeCard,
                       borderRadius: BorderRadius.circular(AppDimensions.radiusCard),
-                      border: Border.all(color: AppColors.border),
+                      border: Border.all(color: context.themeBorder),
+                    ),
+                    child: Text(
+                      opportunity.selectionProcedure.isNotEmpty
+                          ? opportunity.selectionProcedure
+                          : 'Selection procedure details to be released with the detailed scheme.',
+                      style: AppTypography.body.copyWith(
+                        color: context.themeTextMain,
+                        height: 1.45,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: AppDimensions.space20),
+
+                  // Official Gazette & Source Provenance Verification Card
+                  _buildSectionHeader(context, 'Authoritative Source Provenance', LucideIcons.shieldCheck),
+                  const SizedBox(height: AppDimensions.space8),
+                  Container(
+                    padding: const EdgeInsets.all(AppDimensions.space16),
+                    decoration: BoxDecoration(
+                      color: context.themeCard,
+                      borderRadius: BorderRadius.circular(AppDimensions.radiusCard),
+                      border: Border.all(color: context.themeBorder),
                     ),
                     child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        if (opportunity.officialNotificationPdfUrl != null) ...[
-                          ListTile(
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                            leading: const Icon(LucideIcons.fileText, color: AppColors.white, size: 20),
-                            title: const Text(
-                              'Official Notification Gazette (PDF)',
-                              style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.primaryText),
+                        Row(
+                          children: [
+                            const Icon(LucideIcons.shieldCheck, size: 16, color: AppColors.primaryGreen),
+                            const SizedBox(width: AppDimensions.space8),
+                            Text(
+                              'Verified Authoritative Record',
+                              style: TextStyle(
+                                fontWeight: FontWeight.w700,
+                                fontSize: 13,
+                                color: context.themeTextMain,
+                              ),
                             ),
-                            subtitle: const Text(
-                              'Open verified gazette notification from conducting authority',
-                              style: TextStyle(color: AppColors.secondaryText, fontSize: 11),
-                            ),
-                            trailing: const Icon(LucideIcons.externalLink, size: 16, color: AppColors.secondaryText),
-                            onTap: () => UrlLauncherHelper.openUrl(
-                              context,
-                              opportunity.officialNotificationPdfUrl,
-                              fallbackTitle: 'Gazette Notification PDF',
-                            ),
-                          ),
-                          const Divider(color: AppColors.border, height: 1),
-                        ],
-                        ListTile(
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                          leading: const Icon(LucideIcons.globe, color: AppColors.white, size: 20),
-                          title: const Text(
-                            'Official Application Portal',
-                            style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.primaryText),
-                          ),
-                          subtitle: Text(
-                            opportunity.officialApplicationUrl,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(color: AppColors.secondaryText, fontSize: 11),
-                          ),
-                          trailing: const Icon(LucideIcons.externalLink, size: 16, color: AppColors.secondaryText),
-                          onTap: () => UrlLauncherHelper.openUrl(
-                            context,
-                            opportunity.officialApplicationUrl,
-                            fallbackTitle: 'Official Application Portal',
-                          ),
+                          ],
                         ),
+                        const SizedBox(height: AppDimensions.space8),
+                        Text(
+                          'Conducting Authority: ${opportunity.organisation}',
+                          style: TextStyle(color: context.themeTextMuted, fontSize: 12),
+                        ),
+                        const SizedBox(height: 3),
+                        Text(
+                          'Issuing Body: ${opportunity.issuingAuthority}',
+                          style: TextStyle(color: context.themeTextMuted, fontSize: 12),
+                        ),
+                        if (opportunity.advertisementNumber != null && opportunity.advertisementNumber!.isNotEmpty) ...[
+                          const SizedBox(height: 3),
+                          Text(
+                            'Advertisement No: ${opportunity.advertisementNumber}',
+                            style: TextStyle(color: context.themeTextMuted, fontSize: 12),
+                          ),
+                        ],
+                        const SizedBox(height: 3),
+                        Text(
+                          'Last Verified: ${opportunity.lastVerifiedAt != null ? DateFormat("d MMMM yyyy, hh:mm a").format(opportunity.lastVerifiedAt!) : "Verified today"}',
+                          style: TextStyle(color: context.themeTextMuted, fontSize: 12),
+                        ),
+                        if (opportunity.officialNotificationPdfUrl != null &&
+                            opportunity.officialNotificationPdfUrl!.isNotEmpty) ...[
+                          const SizedBox(height: AppDimensions.space12),
+                          OutlinedButton.icon(
+                            onPressed: () => UrlLauncherHelper.openUrl(
+                              context,
+                              opportunity.verifiedNotificationUrl ?? opportunity.officialNotificationPdfUrl,
+                              fallbackTitle: 'Official Notification PDF',
+                            ),
+                            icon: const Icon(LucideIcons.fileText, size: 15),
+                            label: const Text('View Official Notification Document'),
+                            style: OutlinedButton.styleFrom(
+                              minimumSize: const Size.fromHeight(40),
+                              side: BorderSide(color: context.themeBorder),
+                              foregroundColor: context.themeTextMain,
+                              backgroundColor: context.themeSurfaceElevated,
+                            ),
+                          ),
+                        ],
                       ],
                     ),
                   ),
@@ -578,9 +712,9 @@ class OpportunityDetailsScreen extends ConsumerWidget {
             ),
             bottomNavigationBar: Container(
               padding: const EdgeInsets.all(AppDimensions.space16),
-              decoration: const BoxDecoration(
-                color: AppColors.cardBackground,
-                border: Border(top: BorderSide(color: AppColors.border)),
+              decoration: BoxDecoration(
+                color: context.themeCard,
+                border: Border(top: BorderSide(color: context.themeBorder)),
               ),
               child: SafeArea(
                 child: Row(
@@ -592,9 +726,9 @@ class OpportunityDetailsScreen extends ConsumerWidget {
                         icon: const Icon(LucideIcons.clipboardCheck, size: 16),
                         label: const Text('Track Application'),
                         style: OutlinedButton.styleFrom(
-                          side: const BorderSide(color: AppColors.border),
-                          foregroundColor: AppColors.primaryText,
-                          backgroundColor: AppColors.elevatedSurface,
+                          side: BorderSide(color: context.themeBorder),
+                          foregroundColor: context.themeTextMain,
+                          backgroundColor: context.themeSurfaceElevated,
                           minimumSize: const Size.fromHeight(48),
                         ),
                       ),
@@ -603,16 +737,23 @@ class OpportunityDetailsScreen extends ConsumerWidget {
                     Expanded(
                       flex: 1,
                       child: ElevatedButton.icon(
-                        onPressed: () => UrlLauncherHelper.openUrl(
+                        onPressed: () => UrlLauncherHelper.openApplicationPortal(
                           context,
-                          opportunity.officialApplicationUrl,
-                          fallbackTitle: 'Official Application Portal',
+                          applicationUrl: opportunity.verifiedApplicationUrl ?? opportunity.officialApplicationUrl,
+                          notificationPdfUrl: opportunity.verifiedNotificationUrl ?? opportunity.officialNotificationPdfUrl,
+                          sourcePortalUrl: opportunity.sourceUrl,
+                          isApplicationUrlVerified: opportunity.isApplicationUrlVerified,
+                          applicationUrlStatus: opportunity.applicationUrlStatus,
                         ),
-                        icon: const Icon(LucideIcons.externalLink, size: 16, color: AppColors.black),
+                        icon: Icon(
+                          LucideIcons.externalLink,
+                          size: 16,
+                          color: context.isDarkMode ? AppColors.black : AppColors.white,
+                        ),
                         label: const Text('Apply on Portal'),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.white,
-                          foregroundColor: AppColors.black,
+                          backgroundColor: context.isDarkMode ? AppColors.white : AppColors.black,
+                          foregroundColor: context.isDarkMode ? AppColors.black : AppColors.white,
                           minimumSize: const Size.fromHeight(48),
                         ),
                       ),
@@ -624,15 +765,16 @@ class OpportunityDetailsScreen extends ConsumerWidget {
           ),
         );
       },
-      loading: () => const Scaffold(
-        backgroundColor: AppColors.mainBackground,
-        body: Center(child: CircularProgressIndicator(color: AppColors.white)),
+      loading: () => Scaffold(
+        backgroundColor: context.themeBackground,
+        body: Center(child: CircularProgressIndicator(color: context.themeTextMain)),
       ),
       error: (err, stack) => Scaffold(
-        backgroundColor: AppColors.mainBackground,
+        backgroundColor: context.themeBackground,
         appBar: AppBar(
+          backgroundColor: context.themeBackground,
           leading: IconButton(
-            icon: const Icon(LucideIcons.arrowLeft, color: AppColors.primaryText),
+            icon: Icon(LucideIcons.arrowLeft, color: context.themeTextMain),
             onPressed: () => context.pop(),
           ),
         ),
@@ -643,15 +785,15 @@ class OpportunityDetailsScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildSectionHeader(String title, IconData icon) {
+  Widget _buildSectionHeader(BuildContext context, String title, IconData icon) {
     return Row(
       children: [
-        Icon(icon, size: 14, color: AppColors.secondaryText),
+        Icon(icon, size: 14, color: context.themeTextMuted),
         const SizedBox(width: AppDimensions.space8),
         Text(
           title,
           style: AppTypography.sectionHeader.copyWith(
-            color: AppColors.primaryText,
+            color: context.themeTextMain,
             fontSize: 14,
             fontWeight: FontWeight.w600,
           ),
@@ -663,60 +805,77 @@ class OpportunityDetailsScreen extends ConsumerWidget {
   // ---------------------------------------------------------------------------
   // Important Dates: Structured Timeline Component
   // ---------------------------------------------------------------------------
-  Widget _buildStructuredTimeline(Opportunity opportunity) {
+  Widget _buildStructuredTimeline(BuildContext context, Opportunity opportunity) {
     final List<Map<String, dynamic>> timelineItems = [];
 
     if (opportunity.importantDates.containsKey('notification_date') ||
         opportunity.importantDates.containsKey('Notification Released')) {
       final d = opportunity.importantDates['notification_date'] ?? opportunity.importantDates['Notification Released'];
       if (d != null) {
-        timelineItems.add({'title': 'Notification Released', 'date': d, 'isPast': DateTime.now().isAfter(d)});
+        timelineItems.add({
+          'title': 'Notification Released',
+          'date': d,
+          'isPast': DateTime.now().isAfter(d),
+          'isHighlight': false,
+        });
       }
     }
 
-    if (opportunity.importantDates.containsKey('application_start_date') ||
-        opportunity.importantDates.containsKey('Application Window Opens')) {
-      final d = opportunity.importantDates['application_start_date'] ?? opportunity.importantDates['Application Window Opens'];
-      if (d != null) {
-        timelineItems.add({'title': 'Application Window Opens', 'date': d, 'isPast': DateTime.now().isAfter(d)});
-      }
+    final start = opportunity.applicationStartDate;
+    if (start != null) {
+      timelineItems.add({
+        'title': 'Applications Open',
+        'date': start,
+        'isPast': DateTime.now().isAfter(start),
+        'isHighlight': false,
+      });
     }
 
-    if (opportunity.applicationDeadline != null) {
+    final deadline = opportunity.applicationDeadline;
+    if (deadline != null) {
       timelineItems.add({
         'title': 'Application Deadline',
-        'date': opportunity.applicationDeadline!,
-        'isPast': DateTime.now().isAfter(opportunity.applicationDeadline!),
+        'date': deadline,
+        'isPast': DateTime.now().isAfter(deadline),
         'isHighlight': true,
       });
     }
 
-    if (opportunity.importantDates.containsKey('fee_payment_deadline')) {
-      final d = opportunity.importantDates['fee_payment_deadline'];
+    if (opportunity.importantDates.containsKey('Admit Card Release') ||
+        opportunity.importantDates.containsKey('admit_card_date')) {
+      final d = opportunity.importantDates['Admit Card Release'] ?? opportunity.importantDates['admit_card_date'];
       if (d != null) {
-        timelineItems.add({'title': 'Fee Payment Last Date', 'date': d, 'isPast': DateTime.now().isAfter(d)});
+        timelineItems.add({
+          'title': 'Admit Card Release',
+          'date': d,
+          'isPast': DateTime.now().isAfter(d),
+          'isHighlight': false,
+        });
       }
     }
 
-    if (opportunity.importantDates.containsKey('admit_card_date')) {
-      final d = opportunity.importantDates['admit_card_date'];
-      if (d != null) {
-        timelineItems.add({'title': 'Admit Card Available', 'date': d, 'isPast': DateTime.now().isAfter(d)});
-      }
+    final examDate = opportunity.importantDates['Examination Date'] ??
+        opportunity.importantDates['prelims_date'] ??
+        opportunity.importantDates['prelims_exam_date'];
+    if (examDate != null) {
+      timelineItems.add({
+        'title': 'Examination Date',
+        'date': examDate,
+        'isPast': DateTime.now().isAfter(examDate),
+        'isHighlight': false,
+      });
     }
 
-    if (opportunity.importantDates.containsKey('examination_start_date') ||
-        opportunity.importantDates.containsKey('Scheduled Examination Date')) {
-      final d = opportunity.importantDates['examination_start_date'] ?? opportunity.importantDates['Scheduled Examination Date'];
+    if (opportunity.importantDates.containsKey('Result Declaration') ||
+        opportunity.importantDates.containsKey('result_date')) {
+      final d = opportunity.importantDates['Result Declaration'] ?? opportunity.importantDates['result_date'];
       if (d != null) {
-        timelineItems.add({'title': 'Scheduled Examination Date', 'date': d, 'isPast': DateTime.now().isAfter(d)});
-      }
-    }
-
-    if (opportunity.importantDates.containsKey('result_date')) {
-      final d = opportunity.importantDates['result_date'];
-      if (d != null) {
-        timelineItems.add({'title': 'Result Announcement', 'date': d, 'isPast': DateTime.now().isAfter(d)});
+        timelineItems.add({
+          'title': 'Result Declaration',
+          'date': d,
+          'isPast': DateTime.now().isAfter(d),
+          'isHighlight': false,
+        });
       }
     }
 
@@ -733,9 +892,9 @@ class OpportunityDetailsScreen extends ConsumerWidget {
     return Container(
       padding: const EdgeInsets.all(AppDimensions.space16),
       decoration: BoxDecoration(
-        color: AppColors.cardBackground,
+        color: context.themeCard,
         borderRadius: BorderRadius.circular(AppDimensions.radiusCard),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: context.themeBorder),
       ),
       child: Column(
         children: List.generate(timelineItems.length, (index) {
@@ -760,10 +919,12 @@ class OpportunityDetailsScreen extends ConsumerWidget {
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
                           color: isHighlight
-                              ? AppColors.white
-                              : (isPast ? AppColors.mutedText : AppColors.cardBackground),
+                              ? (context.isDarkMode ? AppColors.white : AppColors.black)
+                              : (isPast ? AppColors.mutedText : context.themeCard),
                           border: Border.all(
-                            color: isHighlight ? AppColors.white : AppColors.border,
+                            color: isHighlight
+                                ? (context.isDarkMode ? AppColors.white : AppColors.black)
+                                : context.themeBorder,
                             width: 2,
                           ),
                         ),
@@ -772,7 +933,7 @@ class OpportunityDetailsScreen extends ConsumerWidget {
                         Expanded(
                           child: Container(
                             width: 1.5,
-                            color: AppColors.border,
+                            color: context.themeBorder,
                           ),
                         ),
                     ],
@@ -795,7 +956,7 @@ class OpportunityDetailsScreen extends ConsumerWidget {
                               Text(
                                 item['title'] as String,
                                 style: TextStyle(
-                                  color: isHighlight ? AppColors.primaryText : AppColors.secondaryText,
+                                  color: isHighlight ? context.themeTextMain : context.themeTextMuted,
                                   fontSize: 13,
                                   fontWeight: isHighlight ? FontWeight.w700 : FontWeight.w500,
                                 ),
@@ -803,8 +964,8 @@ class OpportunityDetailsScreen extends ConsumerWidget {
                               const SizedBox(height: 2),
                               Text(
                                 isPast ? 'Completed / Past' : (isHighlight ? 'Closing soon' : 'Upcoming'),
-                                style: const TextStyle(
-                                  color: AppColors.mutedText,
+                                style: TextStyle(
+                                  color: context.themeTextSubtle,
                                   fontSize: 10.5,
                                 ),
                               ),
@@ -814,7 +975,7 @@ class OpportunityDetailsScreen extends ConsumerWidget {
                         Text(
                           DateFormat('d MMMM yyyy').format(dt),
                           style: TextStyle(
-                            color: isHighlight ? AppColors.primaryText : AppColors.secondaryText,
+                            color: isHighlight ? context.themeTextMain : context.themeTextMuted,
                             fontSize: 12.5,
                             fontWeight: isHighlight ? FontWeight.w700 : FontWeight.w500,
                           ),
@@ -831,36 +992,51 @@ class OpportunityDetailsScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildEligibilityCard(BuildContext context, EligibilityReport report) {
+  Widget _buildEligibilityCard(BuildContext context, EligibilityReport report, Opportunity opportunity) {
     Color dotColor;
     String statusTitle;
+    String statusSummary;
 
-    switch (report.overallStatus) {
-      case EligibilityStatus.eligible:
-        dotColor = AppColors.eligible;
-        statusTitle = 'Statutory Criteria Satisfied';
-        break;
-      case EligibilityStatus.potentiallyEligible:
-        dotColor = AppColors.pending;
-        statusTitle = 'Candidate Likely Eligible';
-        break;
-      case EligibilityStatus.notEligible:
-        dotColor = AppColors.ineligible;
-        statusTitle = 'Statutory Criteria Not Met';
-        break;
-      case EligibilityStatus.missingInformation:
-      case EligibilityStatus.needsVerification:
-        dotColor = AppColors.pending;
-        statusTitle = 'Additional Profile Verification Required';
-        break;
+    final isInfoIncomplete = report.overallStatus == EligibilityStatus.missingInformation ||
+        report.overallStatus == EligibilityStatus.needsVerification ||
+        opportunity.uncertainFields.isNotEmpty;
+
+    if (isInfoIncomplete) {
+      dotColor = AppColors.pending;
+      statusTitle = 'Eligibility Information Incomplete';
+      statusSummary = 'Eligibility cannot be confirmed because official information is incomplete.';
+    } else {
+      switch (report.overallStatus) {
+        case EligibilityStatus.eligible:
+          dotColor = AppColors.eligible;
+          statusTitle = 'Statutory Criteria Satisfied';
+          statusSummary = report.overallSummary;
+          break;
+        case EligibilityStatus.potentiallyEligible:
+          dotColor = AppColors.pending;
+          statusTitle = 'Candidate Likely Eligible';
+          statusSummary = report.overallSummary;
+          break;
+        case EligibilityStatus.notEligible:
+          dotColor = AppColors.ineligible;
+          statusTitle = 'Statutory Criteria Not Met';
+          statusSummary = report.overallSummary;
+          break;
+        case EligibilityStatus.missingInformation:
+        case EligibilityStatus.needsVerification:
+          dotColor = AppColors.pending;
+          statusTitle = 'Eligibility Information Incomplete';
+          statusSummary = 'Eligibility cannot be confirmed because official information is incomplete.';
+          break;
+      }
     }
 
     return Container(
       padding: const EdgeInsets.all(AppDimensions.space16),
       decoration: BoxDecoration(
-        color: AppColors.cardBackground,
+        color: context.themeCard,
         borderRadius: BorderRadius.circular(AppDimensions.radiusCard),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: context.themeBorder),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -879,8 +1055,8 @@ class OpportunityDetailsScreen extends ConsumerWidget {
               Expanded(
                 child: Text(
                   statusTitle,
-                  style: const TextStyle(
-                    color: AppColors.primaryText,
+                  style: TextStyle(
+                    color: context.themeTextMain,
                     fontSize: 14,
                     fontWeight: FontWeight.w700,
                   ),
@@ -888,34 +1064,32 @@ class OpportunityDetailsScreen extends ConsumerWidget {
               ),
             ],
           ),
-          if (report.overallSummary.isNotEmpty) ...[
-            const SizedBox(height: AppDimensions.space8),
-            Text(
-              report.overallSummary,
-              style: const TextStyle(
-                color: AppColors.secondaryText,
-                fontSize: 12.5,
-                height: 1.4,
-              ),
+          const SizedBox(height: AppDimensions.space8),
+          Text(
+            statusSummary,
+            style: TextStyle(
+              color: context.themeTextMuted,
+              fontSize: 12.5,
+              height: 1.4,
             ),
-          ],
+          ),
           const SizedBox(height: AppDimensions.space12),
           InkWell(
             onTap: () => context.push('/eligibility/$opportunityId'),
-            child: const Row(
+            child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
                   'View comprehensive evaluation breakdown',
                   style: TextStyle(
-                    color: AppColors.primaryText,
+                    color: context.themeTextMain,
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
                     decoration: TextDecoration.underline,
                   ),
                 ),
-                SizedBox(width: 4),
-                Icon(LucideIcons.arrowRight, size: 14, color: AppColors.primaryText),
+                const SizedBox(width: 4),
+                Icon(LucideIcons.arrowRight, size: 14, color: context.themeTextMain),
               ],
             ),
           ),
@@ -924,20 +1098,20 @@ class OpportunityDetailsScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildCriterionRow(String label, String value) {
+  Widget _buildCriterionRow(BuildContext context, String label, String value) {
     return Padding(
       padding: const EdgeInsets.only(bottom: AppDimensions.space12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label, style: const TextStyle(color: AppColors.secondaryText, fontSize: 11.5, fontWeight: FontWeight.w500)),
+          Text(label, style: TextStyle(color: context.themeTextMuted, fontSize: 11.5, fontWeight: FontWeight.w500)),
           const SizedBox(height: 3),
           Text(
             value,
-            style: const TextStyle(
+            style: TextStyle(
               fontWeight: FontWeight.w600,
               fontSize: 13,
-              color: AppColors.primaryText,
+              color: context.themeTextMain,
               height: 1.35,
             ),
           ),

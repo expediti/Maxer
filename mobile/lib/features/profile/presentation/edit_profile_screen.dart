@@ -141,12 +141,10 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
       helpText: 'SELECT DATE OF BIRTH',
       builder: (context, child) {
         return Theme(
-          data: ThemeData.dark().copyWith(
-            colorScheme: const ColorScheme.dark(
-              primary: AppColors.white,
-              onPrimary: AppColors.black,
-              surface: AppColors.cardBackground,
-              onSurface: AppColors.primaryText,
+          data: Theme.of(context).copyWith(
+            colorScheme: Theme.of(context).colorScheme.copyWith(
+              primary: AppColors.primaryGreen,
+              onPrimary: AppColors.white,
             ),
           ),
           child: child!,
@@ -193,15 +191,15 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
         setState(() => _isSaving = false);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text(
+            content: Text(
               'Profile updated successfully.',
-              style: TextStyle(color: AppColors.primaryText),
+              style: TextStyle(color: context.themeTextMain),
             ),
-            backgroundColor: AppColors.cardBackground,
+            backgroundColor: context.themeCard,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(8),
-              side: const BorderSide(color: AppColors.border),
+              side: BorderSide(color: context.themeBorder),
             ),
           ),
         );
@@ -235,12 +233,12 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
         }
       },
       child: Scaffold(
-        backgroundColor: AppColors.mainBackground,
+        backgroundColor: context.themeBackground,
         appBar: AppBar(
-          backgroundColor: AppColors.mainBackground,
+          backgroundColor: context.themeBackground,
           elevation: 0,
           leading: IconButton(
-            icon: const Icon(LucideIcons.arrowLeft, color: AppColors.primaryText, size: 20),
+            icon: Icon(LucideIcons.arrowLeft, color: context.themeTextMain, size: 20),
             onPressed: () {
               if (context.canPop()) {
                 context.pop();
@@ -251,12 +249,15 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
           ),
           title: Text(
             'Edit Profile',
-            style: AppTypography.screenTitle.copyWith(fontSize: 18),
+            style: AppTypography.screenTitle.copyWith(
+              fontSize: 18,
+              color: context.themeTextMain,
+            ),
           ),
         ),
         body: profileAsync.when(
-          loading: () => const Center(
-            child: CircularProgressIndicator(color: AppColors.white),
+          loading: () => Center(
+            child: CircularProgressIndicator(color: context.themeTextMain),
           ),
           error: (err, _) => Center(
             child: Text(
@@ -280,7 +281,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                     // Full Name
                     TextFormField(
                       controller: _nameController,
-                      style: const TextStyle(color: AppColors.primaryText),
+                      style: TextStyle(color: context.themeTextMain),
                       decoration: const InputDecoration(
                         labelText: 'Full Legal Name *',
                         prefixIcon: Icon(LucideIcons.user, size: 18),
@@ -296,28 +297,28 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                       child: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
                         decoration: BoxDecoration(
-                          color: AppColors.elevatedSurface,
+                          color: context.themeSurfaceElevated,
                           borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
-                          border: Border.all(color: AppColors.border),
+                          border: Border.all(color: context.themeBorder),
                         ),
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Row(
                               children: [
-                                const Icon(LucideIcons.calendar, size: 18, color: AppColors.mutedText),
+                                Icon(LucideIcons.calendar, size: 18, color: context.themeTextMuted),
                                 const SizedBox(width: 12),
                                 Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    const Text('Date of Birth *', style: TextStyle(color: AppColors.secondaryText, fontSize: 11)),
+                                    Text('Date of Birth *', style: TextStyle(color: context.themeTextMuted, fontSize: 11)),
                                     const SizedBox(height: 2),
                                     Text(
                                       _dateOfBirth != null
                                           ? DateFormat('d MMMM yyyy').format(_dateOfBirth!)
                                           : 'Select Date of Birth',
                                       style: TextStyle(
-                                        color: _dateOfBirth != null ? AppColors.primaryText : AppColors.mutedText,
+                                        color: _dateOfBirth != null ? context.themeTextMain : context.themeTextMuted,
                                         fontSize: 14,
                                         fontWeight: FontWeight.w600,
                                       ),
@@ -330,14 +331,14 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                               Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                 decoration: BoxDecoration(
-                                  color: AppColors.cardBackground,
+                                  color: context.themeCard,
                                   borderRadius: BorderRadius.circular(AppDimensions.radiusSmall),
-                                  border: Border.all(color: AppColors.border),
+                                  border: Border.all(color: context.themeBorder),
                                 ),
                                 child: Text(
                                   '$_calculatedAge yrs',
-                                  style: const TextStyle(
-                                    color: AppColors.primaryText,
+                                  style: TextStyle(
+                                    color: context.themeTextMain,
                                     fontSize: 11.5,
                                     fontWeight: FontWeight.w700,
                                   ),
@@ -355,8 +356,8 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                         Expanded(
                           child: DropdownButtonFormField<String>(
                             initialValue: _gender,
-                            dropdownColor: AppColors.elevatedSurface,
-                            style: const TextStyle(color: AppColors.primaryText, fontSize: 13.5),
+                            dropdownColor: context.themeCard,
+                            style: TextStyle(color: context.themeTextMain, fontSize: 13.5),
                             decoration: const InputDecoration(
                               labelText: 'Gender',
                               prefixIcon: Icon(LucideIcons.users, size: 18),
@@ -375,8 +376,8 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                           child: DropdownButtonFormField<String>(
                             initialValue: _state,
                             isExpanded: true,
-                            dropdownColor: AppColors.elevatedSurface,
-                            style: const TextStyle(color: AppColors.primaryText, fontSize: 13.5),
+                            dropdownColor: context.themeCard,
+                            style: TextStyle(color: context.themeTextMain, fontSize: 13.5),
                             decoration: const InputDecoration(
                               labelText: 'State *',
                               prefixIcon: Icon(LucideIcons.mapPin, size: 18),
@@ -392,7 +393,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                     // District
                     TextFormField(
                       controller: _districtController,
-                      style: const TextStyle(color: AppColors.primaryText),
+                      style: TextStyle(color: context.themeTextMain),
                       decoration: const InputDecoration(
                         labelText: 'District (Optional)',
                         prefixIcon: Icon(LucideIcons.navigation, size: 18),
@@ -404,8 +405,8 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                     DropdownButtonFormField<String>(
                       initialValue: _currentStatus,
                       isExpanded: true,
-                      dropdownColor: AppColors.elevatedSurface,
-                      style: const TextStyle(color: AppColors.primaryText, fontSize: 13.5),
+                      dropdownColor: context.themeCard,
+                      style: TextStyle(color: context.themeTextMain, fontSize: 13.5),
                       decoration: const InputDecoration(
                         labelText: 'Current Academic / Career Status',
                         prefixIcon: Icon(LucideIcons.briefcase, size: 18),
@@ -418,7 +419,10 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                     // Section Heading: Category & Quota
                     Text(
                       'Statutory Category & Reservations',
-                      style: AppTypography.sectionHeader.copyWith(fontSize: 14),
+                      style: AppTypography.sectionHeader.copyWith(
+                        fontSize: 14,
+                        color: context.themeTextMain,
+                      ),
                     ),
                     const SizedBox(height: AppDimensions.space12),
 
@@ -434,14 +438,14 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                           onSelected: (selected) {
                             if (selected) setState(() => _socialCategory = cat);
                           },
-                          backgroundColor: AppColors.elevatedSurface,
-                          selectedColor: AppColors.white,
+                          backgroundColor: context.themeSurfaceElevated,
+                          selectedColor: AppColors.primaryGreen,
                           labelStyle: TextStyle(
-                            color: isSel ? AppColors.black : AppColors.secondaryText,
+                            color: isSel ? AppColors.white : context.themeTextMuted,
                             fontWeight: isSel ? FontWeight.w700 : FontWeight.w500,
                             fontSize: 12.5,
                           ),
-                          side: BorderSide(color: isSel ? AppColors.white : AppColors.border),
+                          side: BorderSide(color: isSel ? AppColors.primaryGreen : context.themeBorder),
                           showCheckmark: false,
                         );
                       }).toList(),
@@ -451,11 +455,11 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                     if (_socialCategory == 'OBC') ...[
                       SwitchListTile(
                         contentPadding: EdgeInsets.zero,
-                        title: const Text('OBC Non-Creamy Layer (NCL)', style: TextStyle(color: AppColors.primaryText, fontSize: 13.5)),
-                        subtitle: const Text('Eligible for central/state reservation quota', style: TextStyle(color: AppColors.mutedText, fontSize: 11.5)),
+                        title: Text('OBC Non-Creamy Layer (NCL)', style: TextStyle(color: context.themeTextMain, fontSize: 13.5)),
+                        subtitle: Text('Eligible for central/state reservation quota', style: TextStyle(color: context.themeTextMuted, fontSize: 11.5)),
                         value: _isObcNcl,
-                        activeTrackColor: AppColors.white,
-                        activeThumbColor: AppColors.black,
+                        activeTrackColor: AppColors.primaryGreen,
+                        activeThumbColor: AppColors.white,
                         onChanged: (val) => setState(() => _isObcNcl = val),
                       ),
                       const SizedBox(height: AppDimensions.space12),
@@ -463,17 +467,17 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
 
                     SwitchListTile(
                       contentPadding: EdgeInsets.zero,
-                      title: const Text('Person with Benchmark Disability (PwBD)', style: TextStyle(color: AppColors.primaryText, fontSize: 13.5)),
+                      title: Text('Person with Benchmark Disability (PwBD)', style: TextStyle(color: context.themeTextMain, fontSize: 13.5)),
                       value: _isPwBD,
-                      activeTrackColor: AppColors.white,
-                      activeThumbColor: AppColors.black,
+                      activeTrackColor: AppColors.primaryGreen,
+                      activeThumbColor: AppColors.white,
                       onChanged: (val) => setState(() => _isPwBD = val),
                     ),
                     if (_isPwBD) ...[
                       const SizedBox(height: 8),
                       TextFormField(
                         controller: _disabilityController,
-                        style: const TextStyle(color: AppColors.primaryText),
+                        style: TextStyle(color: context.themeTextMain),
                         decoration: const InputDecoration(
                           labelText: 'Disability Category / Benchmark (e.g. Locomotor, VH, HH)',
                           prefixIcon: Icon(LucideIcons.activity, size: 18),
@@ -483,10 +487,10 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
 
                     SwitchListTile(
                       contentPadding: EdgeInsets.zero,
-                      title: const Text('Ex-Serviceman (ESM) Quota', style: TextStyle(color: AppColors.primaryText, fontSize: 13.5)),
+                      title: Text('Ex-Serviceman (ESM) Quota', style: TextStyle(color: context.themeTextMain, fontSize: 13.5)),
                       value: _isExServiceman,
-                      activeTrackColor: AppColors.white,
-                      activeThumbColor: AppColors.black,
+                      activeTrackColor: AppColors.primaryGreen,
+                      activeThumbColor: AppColors.white,
                       onChanged: (val) => setState(() => _isExServiceman = val),
                     ),
 
@@ -495,11 +499,16 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                     // Save Button
                     ElevatedButton(
                       onPressed: _isSaving ? null : () => _saveChanges(profile),
+                      style: ElevatedButton.styleFrom(
+                        minimumSize: const Size.fromHeight(48),
+                        backgroundColor: AppColors.primaryGreen,
+                        foregroundColor: AppColors.white,
+                      ),
                       child: _isSaving
                           ? const SizedBox(
                               width: 20,
                               height: 20,
-                              child: CircularProgressIndicator(color: AppColors.black, strokeWidth: 2),
+                              child: CircularProgressIndicator(color: AppColors.white, strokeWidth: 2),
                             )
                           : const Text('Save Profile Changes'),
                     ),

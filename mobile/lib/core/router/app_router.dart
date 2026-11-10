@@ -11,6 +11,7 @@ import '../../features/profile/presentation/profile_wizard_screen.dart';
 import '../../features/profile/presentation/edit_profile_screen.dart';
 import '../../features/profile/presentation/qualifications_screen.dart';
 import '../../features/profile/presentation/profile_screen.dart';
+import '../../features/profile/presentation/profile_completion_screen.dart';
 import '../../features/opportunities/presentation/discover_screen.dart';
 import '../../features/opportunities/presentation/explorer_screen.dart';
 import '../../features/opportunities/presentation/opportunity_details_screen.dart';
@@ -100,6 +101,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/profile/qualifications',
         parentNavigatorKey: _rootNavigatorKey,
         builder: (context, state) => const QualificationsScreen(),
+      ),
+      GoRoute(
+        path: '/profile/completion',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const ProfileCompletionScreen(),
       ),
       GoRoute(
         path: '/opportunities/:id',

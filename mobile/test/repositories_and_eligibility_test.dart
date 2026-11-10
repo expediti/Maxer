@@ -29,8 +29,12 @@ class TestExaminationRepository implements ExaminationRepository {
     ExaminationCategory? category,
     bool? isCentralGovernment,
     String? searchQuery,
+    String? state,
+    String? qualification,
+    String? applicationStatus,
+    String? organisation,
     int page = 1,
-    int limit = 20,
+    int limit = 30,
   }) async => _testExams;
 
   @override

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_dimensions.dart';
+import '../../../core/constants/branding.dart';
 import '../../../core/theme/app_typography.dart';
 import 'providers/auth_provider.dart';
 
@@ -41,44 +42,25 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.mainBackground,
+      backgroundColor: context.themeBackground,
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // Minimal emerald brand symbol
-            Container(
-              width: 58,
-              height: 58,
-              decoration: BoxDecoration(
-                color: AppColors.elevatedSurface,
-                borderRadius: AppDimensions.roundedDefault,
-                border: Border.all(
-                  color: AppColors.borders,
-                  width: 1.2,
-                ),
-              ),
-              child: Center(
-                child: Container(
-                  width: 20,
-                  height: 20,
-                  decoration: const BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: AppColors.primaryGreen,
-                  ),
-                ),
-              ),
+            // Official Rexam Logo
+            AppBranding.logoImage(
+              size: 64,
             ),
             const SizedBox(height: AppDimensions.space20),
 
             // REXAM Wordmark (Preserved for tests)
             Text(
-              'REXAM',
+              AppBranding.brandName,
               style: AppTypography.brandTitle.copyWith(
                 fontSize: 26,
                 letterSpacing: 4.0,
                 fontWeight: FontWeight.w800,
-                color: AppColors.mainText,
+                color: context.themeTextMain,
               ),
             ),
             const SizedBox(height: AppDimensions.space8),
@@ -88,7 +70,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
               'Indian Examination & Opportunity Intelligence',
               textAlign: TextAlign.center,
               style: AppTypography.caption.copyWith(
-                color: AppColors.secondaryText,
+                color: context.themeTextMuted,
                 letterSpacing: 0.5,
               ),
             ),

@@ -29,33 +29,33 @@ class EmptyStateView extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(AppDimensions.space16),
               decoration: BoxDecoration(
-                color: AppColors.surface,
+                color: context.themeCard,
                 shape: BoxShape.circle,
-                border: Border.all(color: AppColors.border),
+                border: Border.all(color: context.themeBorder),
               ),
               child: Icon(
                 icon,
                 size: 36,
-                color: AppColors.textMuted,
+                color: context.themeTextMuted,
               ),
             ),
             const SizedBox(height: AppDimensions.space16),
             Text(
               title,
               textAlign: TextAlign.center,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
-                color: AppColors.textMain,
+                color: context.themeTextMain,
               ),
             ),
             const SizedBox(height: AppDimensions.space8),
             Text(
               description,
               textAlign: TextAlign.center,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 13,
-                color: AppColors.textMuted,
+                color: context.themeTextMuted,
                 height: 1.45,
               ),
             ),

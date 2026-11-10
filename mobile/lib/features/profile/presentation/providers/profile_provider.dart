@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rexam/models/candidate_profile.dart';
 import 'package:rexam/features/auth/presentation/providers/auth_provider.dart';
@@ -41,6 +42,29 @@ class ProfileNotifier extends StateNotifier<AsyncValue<CandidateProfile>> {
       state = AsyncValue.data(result);
     } catch (e, st) {
       state = AsyncValue.error(e, st);
+    }
+  }
+
+  Future<bool> uploadAvatar(Uint8List imageBytes, {String extension = 'png'}) async {
+    if (_candidateId.isEmpty) return false;
+    try {
+      final url = await _repository.uploadAvatar(
+        candidateId: _candidateId,
+        bytes: imageBytes,
+        fileExtension: extension,
+      );
+      if (url != null) {
+        final current = state.valueOrNull;
+        if (current != null) {
+          state = AsyncValue.data(current.copyWith(avatarUrl: url));
+        } else {
+          await loadProfile();
+        }
+        return true;
+      }
+      return false;
+    } catch (e) {
+      return false;
     }
   }
 

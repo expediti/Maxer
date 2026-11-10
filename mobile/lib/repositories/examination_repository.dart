@@ -8,8 +8,12 @@ abstract class ExaminationRepository {
     ExaminationCategory? category,
     bool? isCentralGovernment,
     String? searchQuery,
+    String? state,
+    String? qualification,
+    String? applicationStatus,
+    String? organisation,
     int page = 1,
-    int limit = 20,
+    int limit = 30,
   });
   Future<Examination?> getExaminationById(String id);
   Future<List<Examination>> getRecommendedExaminations(CandidateProfile candidate);
@@ -23,8 +27,12 @@ class SupabaseExaminationRepository implements ExaminationRepository {
     ExaminationCategory? category,
     bool? isCentralGovernment,
     String? searchQuery,
+    String? state,
+    String? qualification,
+    String? applicationStatus,
+    String? organisation,
     int page = 1,
-    int limit = 20,
+    int limit = 30,
   }) async {
     final client = SupabaseConfig.client;
     if (client == null) {
@@ -112,9 +120,25 @@ class SupabaseExaminationRepository implements ExaminationRepository {
       if (isCentralGovernment != null) {
         query = query.eq('is_central_government', isCentralGovernment);
       }
+      if (state != null && state.isNotEmpty) {
+        query = query.eq('state', state);
+      }
+      if (applicationStatus != null && applicationStatus.isNotEmpty && applicationStatus != 'all') {
+        if (applicationStatus == 'closing_soon') {
+          final now = DateTime.now();
+          final cutoff = now.add(const Duration(days: 15));
+          query = query.lte('application_close_date', cutoff.toIso8601String());
+        } else {
+          query = query.eq('application_status', applicationStatus);
+        }
+      }
+      if (organisation != null && organisation.trim().isNotEmpty) {
+        final org = organisation.trim();
+        query = query.or('name.ilike.%$org%,title.ilike.%$org%,slug.ilike.%$org%');
+      }
       if (searchQuery != null && searchQuery.trim().isNotEmpty) {
         final term = searchQuery.trim();
-        query = query.or('name.ilike.%$term%,title.ilike.%$term%');
+        query = query.or('name.ilike.%$term%,title.ilike.%$term%,overview.ilike.%$term%');
       }
 
       final int from = (page - 1) * limit;
@@ -123,9 +147,19 @@ class SupabaseExaminationRepository implements ExaminationRepository {
           .order('last_verified_at', ascending: false)
           .range(from, to);
 
-      return (response as List)
+      final results = (response as List)
           .map<Examination>((item) => Examination.fromSupabase(item as Map<String, dynamic>))
           .toList();
+
+      // Client-side qualification check if specified
+      if (qualification != null && qualification.isNotEmpty) {
+        final q = qualification.toLowerCase();
+        return results.where((e) => e.educationalQualifications.any(
+          (eq) => eq.toLowerCase().contains(q) || q.contains(eq.toLowerCase()),
+        )).toList();
+      }
+
+      return results;
     } catch (e) {
       debugPrint('[REXAM] Supabase fetch error: $e');
       return [];

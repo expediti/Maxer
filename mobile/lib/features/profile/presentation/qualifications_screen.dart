@@ -277,12 +277,12 @@ class _QualificationsScreenState extends ConsumerState<QualificationsScreen> {
         }
       },
       child: Scaffold(
-        backgroundColor: AppColors.mainBackground,
+        backgroundColor: context.themeBackground,
         appBar: AppBar(
-          backgroundColor: AppColors.mainBackground,
+          backgroundColor: context.themeBackground,
           elevation: 0,
           leading: IconButton(
-            icon: const Icon(LucideIcons.arrowLeft, color: AppColors.primaryText, size: 20),
+            icon: Icon(LucideIcons.arrowLeft, color: context.themeTextMain, size: 20),
             onPressed: () {
               if (context.canPop()) {
                 context.pop();
@@ -293,12 +293,12 @@ class _QualificationsScreenState extends ConsumerState<QualificationsScreen> {
           ),
           title: Text(
             'Academic Qualifications',
-            style: AppTypography.screenTitle.copyWith(fontSize: 18),
+            style: AppTypography.screenTitle.copyWith(fontSize: 18, color: context.themeTextMain),
           ),
         ),
         body: profileAsync.when(
-          loading: () => const Center(
-            child: CircularProgressIndicator(color: AppColors.white),
+          loading: () => Center(
+            child: CircularProgressIndicator(color: context.themeTextMain),
           ),
           error: (err, _) => Center(
             child: Text(

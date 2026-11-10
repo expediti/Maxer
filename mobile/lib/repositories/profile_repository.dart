@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../core/supabase_client.dart';
 import '../models/candidate_profile.dart';
 import '../models/examination.dart';
@@ -6,6 +7,7 @@ import '../models/examination.dart';
 abstract class ProfileRepository {
   Future<CandidateProfile?> getProfile(String candidateId);
   Future<CandidateProfile> updateProfile(CandidateProfile profile);
+  Future<String?> uploadAvatar({required String candidateId, required Uint8List bytes, String fileExtension = 'png'});
 }
 
 class SupabaseProfileRepository implements ProfileRepository {
@@ -100,6 +102,7 @@ class SupabaseProfileRepository implements ProfileRepository {
         nationality: profileRes['nationality'] ?? 'Indian',
         state: profileRes['state'],
         district: profileRes['district'],
+        avatarUrl: profileRes['avatar_url']?.toString(),
         countryOfResidence: profileRes['country_of_residence'] ?? 'India',
         socialCategory: profileRes['social_category'] ?? 'General',
         isObcNcl: profileRes['is_obc_ncl'] == true,
@@ -198,6 +201,7 @@ class SupabaseProfileRepository implements ProfileRepository {
             'nationality': profile.nationality,
             'state': profile.state,
             'district': profile.district,
+            'avatar_url': profile.avatarUrl,
             'country_of_residence': profile.countryOfResidence,
             'current_status': profile.currentStatus,
             'social_category': profile.socialCategory,
@@ -228,6 +232,7 @@ class SupabaseProfileRepository implements ProfileRepository {
             'nationality': profile.nationality,
             'state': profile.state,
             'district': profile.district,
+            'avatar_url': profile.avatarUrl,
             'country_of_residence': profile.countryOfResidence,
             'social_category': profile.socialCategory,
             'is_pwbd': profile.isPwBD,
@@ -354,6 +359,37 @@ class SupabaseProfileRepository implements ProfileRepository {
     } catch (e) {
       debugPrint('[REXAM] Update profile Supabase critical error: $e');
       throw Exception('Failed to persist profile: $e');
+    }
+  }
+
+  @override
+  Future<String?> uploadAvatar({
+    required String candidateId,
+    required Uint8List bytes,
+    String fileExtension = 'png',
+  }) async {
+    final client = SupabaseConfig.client;
+    if (client == null || candidateId.trim().isEmpty) return null;
+
+    try {
+      final fileName = '$candidateId/avatar.$fileExtension';
+      await client.storage.from('profile-avatars').uploadBinary(
+        fileName,
+        bytes,
+        fileOptions: const FileOptions(upsert: true, contentType: 'image/png'),
+      );
+
+      final publicUrl = client.storage.from('profile-avatars').getPublicUrl(fileName);
+
+      await client.from('profiles').update({
+        'avatar_url': publicUrl,
+        'updated_at': DateTime.now().toUtc().toIso8601String(),
+      }).eq('id', candidateId);
+
+      return publicUrl;
+    } catch (e) {
+      debugPrint('[REXAM] Avatar upload error: $e');
+      return null;
     }
   }
 }

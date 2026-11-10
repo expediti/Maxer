@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../core/constants/app_colors.dart';
 import '../core/constants/app_dimensions.dart';
+import '../core/constants/branding.dart';
 import '../core/theme/app_typography.dart';
 
 class RexamWordmark extends StatelessWidget {
@@ -25,36 +26,17 @@ class RexamWordmark extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Container(
-              width: fontSize * 1.3,
-              height: fontSize * 1.3,
-              decoration: BoxDecoration(
-                color: AppColors.elevatedSurface,
-                borderRadius: BorderRadius.circular(fontSize * 0.35),
-                border: Border.all(
-                  color: AppColors.borders,
-                  width: 1.2,
-                ),
-              ),
-              child: Center(
-                child: Container(
-                  width: fontSize * 0.5,
-                  height: fontSize * 0.5,
-                  decoration: const BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: AppColors.primaryGreen,
-                  ),
-                ),
-              ),
+            AppBranding.logoImage(
+              size: fontSize * 1.3,
             ),
             const SizedBox(width: AppDimensions.space12),
             Text(
-              'REXAM',
+              AppBranding.brandName,
               style: AppTypography.brandTitle.copyWith(
                 fontSize: fontSize,
                 letterSpacing: 3.5,
                 fontWeight: FontWeight.w800,
-                color: AppColors.mainText,
+                color: Theme.of(context).colorScheme.onSurface,
               ),
             ),
           ],
@@ -62,10 +44,10 @@ class RexamWordmark extends StatelessWidget {
         if (showSubtitle) ...[
           const SizedBox(height: AppDimensions.space6),
           Text(
-            'Indian Examination & Opportunity Intelligence',
+            AppBranding.brandTagline,
             textAlign: TextAlign.center,
             style: AppTypography.caption.copyWith(
-              color: AppColors.secondaryText,
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
               letterSpacing: 0.5,
               fontSize: 11.5,
             ),

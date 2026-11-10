@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_dimensions.dart';
+import '../../../core/constants/branding.dart';
 import '../../../core/theme/app_typography.dart';
 import 'providers/auth_provider.dart';
 
@@ -46,7 +47,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: context.themeBackground,
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(
@@ -59,10 +60,24 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text('REXAM', style: AppTypography.brandTitle.copyWith(fontSize: 16, letterSpacing: 2)),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      AppBranding.logoImage(size: 20),
+                      const SizedBox(width: AppDimensions.space8),
+                      Text(
+                        AppBranding.brandName,
+                        style: AppTypography.brandTitle.copyWith(
+                          fontSize: 16,
+                          letterSpacing: 2,
+                          color: context.themeTextMain,
+                        ),
+                      ),
+                    ],
+                  ),
                   TextButton(
                     onPressed: _finishOnboarding,
-                    child: Text('Skip', style: AppTypography.caption.copyWith(color: AppColors.textMuted)),
+                    child: Text('Skip', style: AppTypography.caption.copyWith(color: context.themeTextMuted)),
                   ),
                 ],
               ),
@@ -86,6 +101,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                           style: AppTypography.codeSnippet.copyWith(
                             fontSize: 16,
                             letterSpacing: 1.0,
+                            color: AppColors.primaryGreen,
                           ),
                         ),
                         const SizedBox(height: AppDimensions.space16),
@@ -94,6 +110,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                           style: AppTypography.screenTitle.copyWith(
                             fontSize: 24,
                             height: 1.3,
+                            color: context.themeTextMain,
                           ),
                         ),
                         const SizedBox(height: AppDimensions.space16),
@@ -102,6 +119,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                           style: AppTypography.bodyMuted.copyWith(
                             fontSize: 15,
                             height: 1.5,
+                            color: context.themeTextMuted,
                           ),
                         ),
                       ],
@@ -121,7 +139,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                     width: isActive ? 24 : 8,
                     height: 4,
                     decoration: BoxDecoration(
-                      color: isActive ? AppColors.primaryGreen : AppColors.border,
+                      color: isActive ? AppColors.primaryGreen : context.themeBorder,
                       borderRadius: AppDimensions.roundedSmall,
                     ),
                   );
@@ -142,6 +160,12 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                             curve: Curves.easeInOut,
                           );
                         },
+                        style: OutlinedButton.styleFrom(
+                          side: BorderSide(color: context.themeBorder),
+                          foregroundColor: context.themeTextMain,
+                          backgroundColor: context.themeCard,
+                          minimumSize: const Size.fromHeight(48),
+                        ),
                         child: const Text('Back'),
                       ),
                     ),
@@ -160,6 +184,11 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                           _finishOnboarding();
                         }
                       },
+                      style: ElevatedButton.styleFrom(
+                        minimumSize: const Size.fromHeight(48),
+                        backgroundColor: AppColors.primaryGreen,
+                        foregroundColor: AppColors.white,
+                      ),
                       child: Text(_currentIndex == _pages.length - 1 ? 'Get Started' : 'Continue'),
                     ),
                   ),
@@ -173,4 +202,3 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     );
   }
 }
-

@@ -34,12 +34,12 @@ class EligibilityReportScreen extends ConsumerWidget {
         }
       },
       child: Scaffold(
-        backgroundColor: AppColors.background,
+        backgroundColor: context.themeBackground,
         appBar: AppBar(
-          backgroundColor: AppColors.background,
+          backgroundColor: context.themeBackground,
           elevation: 0,
           leading: IconButton(
-            icon: const Icon(LucideIcons.arrowLeft, color: AppColors.textMain, size: 20),
+            icon: Icon(LucideIcons.arrowLeft, color: context.themeTextMain, size: 20),
             onPressed: () {
               if (context.canPop()) {
                 context.pop();
@@ -50,118 +50,211 @@ class EligibilityReportScreen extends ConsumerWidget {
           ),
           title: Text(
             'Eligibility Assessment Report',
-            style: AppTypography.screenTitle.copyWith(fontSize: 16),
+            style: AppTypography.screenTitle.copyWith(
+              fontSize: 16,
+              color: context.themeTextMain,
+            ),
           ),
         ),
-      body: SafeArea(
-        child: reportAsync.when(
-          data: (report) => SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppDimensions.space16,
-              vertical: AppDimensions.space12,
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Top Banner with Overall Verdict
-                Container(
-                  padding: const EdgeInsets.all(AppDimensions.space16),
-                  decoration: BoxDecoration(
-                    color: AppColors.surface,
-                    borderRadius: BorderRadius.circular(AppDimensions.radiusCard),
-                    border: Border.all(color: AppColors.border),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Row(
-                            children: [
-                              const Icon(LucideIcons.shieldCheck, size: 14, color: AppColors.primaryGreen),
-                              const SizedBox(width: 6),
-                              Text(
-                                'OVERALL STATUTORY EVALUATION',
-                                style: AppTypography.label.copyWith(
-                                  color: AppColors.textMuted,
-                                  fontSize: 11,
-                                  letterSpacing: 0.5,
+        body: SafeArea(
+          child: reportAsync.when(
+            data: (report) => SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppDimensions.space16,
+                vertical: AppDimensions.space12,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Top Banner with Overall Verdict
+                  Container(
+                    padding: const EdgeInsets.all(AppDimensions.space16),
+                    decoration: BoxDecoration(
+                      color: context.themeCard,
+                      borderRadius: BorderRadius.circular(AppDimensions.radiusCard),
+                      border: Border.all(color: context.themeBorder),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Row(
+                              children: [
+                                const Icon(LucideIcons.shieldCheck, size: 14, color: AppColors.primaryGreen),
+                                const SizedBox(width: 6),
+                                Text(
+                                  'OVERALL STATUTORY EVALUATION',
+                                  style: AppTypography.label.copyWith(
+                                    color: context.themeTextMuted,
+                                    fontSize: 11,
+                                    letterSpacing: 0.5,
+                                  ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
+                            StatusBadge(status: report.overallStatus),
+                          ],
+                        ),
+                        const SizedBox(height: AppDimensions.space12),
+                        Text(
+                          report.opportunityTitle,
+                          style: AppTypography.screenTitle.copyWith(
+                            fontSize: 17,
+                            height: 1.3,
+                            color: context.themeTextMain,
                           ),
-                          StatusBadge(status: report.overallStatus),
+                        ),
+                        const SizedBox(height: AppDimensions.space4),
+                        Text(
+                          report.organisation,
+                          style: AppTypography.caption.copyWith(color: context.themeTextMuted),
+                        ),
+                        const SizedBox(height: AppDimensions.space12),
+
+                        // Prominent Incomplete Information Banner if unconfirmed or incomplete
+                        if (report.overallStatus == OpportunityStatus.unconfirmed ||
+                            report.criteriaResults.isEmpty ||
+                            report.criteriaResults.any((c) => c.status == RuleCheckStatus.needsConfirmation)) ...[
+                          Container(
+                            padding: const EdgeInsets.all(AppDimensions.space12),
+                            decoration: BoxDecoration(
+                              color: AppColors.warning.withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(AppDimensions.radiusSmall),
+                              border: Border.all(color: AppColors.warning.withValues(alpha: 0.4)),
+                            ),
+                            child: const Row(
+                              children: [
+                                Icon(LucideIcons.alertTriangle, size: 16, color: AppColors.warning),
+                                SizedBox(width: AppDimensions.space8),
+                                Expanded(
+                                  child: Text(
+                                    'Eligibility cannot be confirmed because official information is incomplete.',
+                                    style: TextStyle(
+                                      color: AppColors.warning,
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 12.5,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: AppDimensions.space12),
                         ],
-                      ),
-                      const SizedBox(height: AppDimensions.space12),
-                      Text(
-                        report.opportunityTitle,
-                        style: AppTypography.screenTitle.copyWith(fontSize: 17, height: 1.3),
-                      ),
-                      const SizedBox(height: AppDimensions.space4),
-                      Text(
-                        report.organisation,
-                        style: AppTypography.caption.copyWith(color: AppColors.textMuted),
-                      ),
-                      const SizedBox(height: AppDimensions.space12),
-                      Container(
-                        padding: const EdgeInsets.all(AppDimensions.space12),
-                        decoration: BoxDecoration(
-                          color: AppColors.secondarySurface,
-                          borderRadius: BorderRadius.circular(AppDimensions.radiusSmall),
-                          border: Border.all(color: AppColors.border),
-                        ),
-                        child: Text(
-                          report.overallSummary,
-                          style: AppTypography.body.copyWith(
-                            color: AppColors.textMain,
-                            height: 1.45,
-                            fontSize: 13,
+
+                        Container(
+                          padding: const EdgeInsets.all(AppDimensions.space12),
+                          decoration: BoxDecoration(
+                            color: context.themeSurfaceElevated,
+                            borderRadius: BorderRadius.circular(AppDimensions.radiusSmall),
+                            border: Border.all(color: context.themeBorder),
+                          ),
+                          child: Text(
+                            report.overallSummary,
+                            style: AppTypography.body.copyWith(
+                              color: context.themeTextMain,
+                              height: 1.45,
+                              fontSize: 13,
+                            ),
                           ),
                         ),
-                      ),
-                      const SizedBox(height: AppDimensions.space12),
-                      Text(
-                        'Evaluated deterministically at ${DateFormatter.formatDateTime(report.evaluatedAt)} against Gazette clauses.',
-                        style: AppTypography.caption.copyWith(color: AppColors.textSubtle, fontSize: 10),
+                        const SizedBox(height: AppDimensions.space12),
+                        Text(
+                          'Evaluated deterministically at ${DateFormatter.formatDateTime(report.evaluatedAt)} against Gazette clauses.',
+                          style: AppTypography.caption.copyWith(color: context.themeTextSubtle, fontSize: 10),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: AppDimensions.space20),
+
+                  // Individual Criteria Verification List
+                  Row(
+                    children: [
+                      const Icon(LucideIcons.checkSquare, size: 14, color: AppColors.primaryGreen),
+                      const SizedBox(width: 6),
+                      const Text(
+                        'CRITERION-BY-CRITERION VERIFICATION',
+                        style: TextStyle(
+                          color: AppColors.primaryGreen,
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 0.5,
+                        ),
                       ),
                     ],
                   ),
-                ),
-                const SizedBox(height: AppDimensions.space20),
+                  const SizedBox(height: AppDimensions.space12),
 
-                // Individual Criteria Verification List
-                Row(
-                  children: [
-                    const Icon(LucideIcons.checkSquare, size: 14, color: AppColors.primaryGreen),
-                    const SizedBox(width: 6),
-                    Text(
-                      'CRITERION-BY-CRITERION VERIFICATION',
-                      style: AppTypography.label.copyWith(
-                        color: AppColors.primaryGreen,
-                        fontSize: 11,
-                        letterSpacing: 0.5,
+                  ...report.criteriaResults.map((result) => _buildCriterionCard(context, result)),
+                  const SizedBox(height: AppDimensions.space16),
+
+                  // Applicable Category Relaxations
+                  if (report.applicableRelaxations.isNotEmpty) ...[
+                    const Row(
+                      children: [
+                        Icon(LucideIcons.award, size: 14, color: AppColors.primaryGreen),
+                        SizedBox(width: 6),
+                        Text(
+                          'APPLICABLE STATUTORY RELAXATIONS',
+                          style: TextStyle(
+                            color: AppColors.primaryGreen,
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: AppDimensions.space8),
+                    Container(
+                      padding: const EdgeInsets.all(AppDimensions.space12),
+                      decoration: BoxDecoration(
+                        color: context.themeCard,
+                        borderRadius: BorderRadius.circular(AppDimensions.radiusCard),
+                        border: Border.all(color: context.themeBorder),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: report.applicableRelaxations.map((rel) {
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: AppDimensions.space6),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Icon(LucideIcons.check, size: 14, color: AppColors.primaryGreen),
+                                const SizedBox(width: AppDimensions.space8),
+                                Expanded(
+                                  child: Text(
+                                    rel,
+                                    style: AppTypography.body.copyWith(
+                                      fontSize: 12,
+                                      color: context.themeTextMain,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        }).toList(),
                       ),
                     ),
+                    const SizedBox(height: AppDimensions.space20),
                   ],
-                ),
-                const SizedBox(height: AppDimensions.space12),
 
-                ...report.criteriaResults.map((result) => _buildCriterionCard(result)),
-                const SizedBox(height: AppDimensions.space16),
-
-                // Applicable Category Relaxations
-                if (report.applicableRelaxations.isNotEmpty) ...[
-                  Row(
+                  // Required Verification Documents
+                  const Row(
                     children: [
-                      const Icon(LucideIcons.award, size: 14, color: AppColors.primaryGreen),
-                      const SizedBox(width: 6),
+                      Icon(LucideIcons.fileCheck, size: 14, color: AppColors.primaryGreen),
+                      SizedBox(width: 6),
                       Text(
-                        'APPLICABLE STATUTORY RELAXATIONS',
-                        style: AppTypography.label.copyWith(
+                        'MANDATORY EVIDENCE FOR DOCUMENT VERIFICATION (DV)',
+                        style: TextStyle(
                           color: AppColors.primaryGreen,
                           fontSize: 11,
+                          fontWeight: FontWeight.bold,
                           letterSpacing: 0.5,
                         ),
                       ),
@@ -171,26 +264,25 @@ class EligibilityReportScreen extends ConsumerWidget {
                   Container(
                     padding: const EdgeInsets.all(AppDimensions.space12),
                     decoration: BoxDecoration(
-                      color: AppColors.surface,
+                      color: context.themeCard,
                       borderRadius: BorderRadius.circular(AppDimensions.radiusCard),
-                      border: Border.all(color: AppColors.border),
+                      border: Border.all(color: context.themeBorder),
                     ),
                     child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: report.applicableRelaxations.map((rel) {
+                      children: report.requiredDocumentsForVerification.map((doc) {
                         return Padding(
-                          padding: const EdgeInsets.only(bottom: AppDimensions.space6),
+                          padding: const EdgeInsets.only(bottom: AppDimensions.space8),
                           child: Row(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Icon(LucideIcons.check, size: 14, color: AppColors.primaryGreen),
+                              const Icon(LucideIcons.fileText, size: 14, color: AppColors.primaryGreen),
                               const SizedBox(width: AppDimensions.space8),
                               Expanded(
                                 child: Text(
-                                  rel,
+                                  doc,
                                   style: AppTypography.body.copyWith(
                                     fontSize: 12,
-                                    color: AppColors.textMain,
+                                    color: context.themeTextMain,
                                   ),
                                 ),
                               ),
@@ -200,99 +292,54 @@ class EligibilityReportScreen extends ConsumerWidget {
                       }).toList(),
                     ),
                   ),
-                  const SizedBox(height: AppDimensions.space20),
-                ],
+                  const SizedBox(height: AppDimensions.space24),
 
-                // Required Verification Documents
-                Row(
-                  children: [
-                    const Icon(LucideIcons.fileCheck, size: 14, color: AppColors.primaryGreen),
-                    const SizedBox(width: 6),
-                    Text(
-                      'MANDATORY EVIDENCE FOR DOCUMENT VERIFICATION (DV)',
-                      style: AppTypography.label.copyWith(
-                        color: AppColors.primaryGreen,
-                        fontSize: 11,
-                        letterSpacing: 0.5,
+                  // Actions
+                  ElevatedButton.icon(
+                    icon: const Icon(LucideIcons.arrowLeft, size: 16),
+                    label: const Text('Back to Opportunity Details'),
+                    style: ElevatedButton.styleFrom(
+                      minimumSize: const Size.fromHeight(48),
+                      backgroundColor: AppColors.primaryGreen,
+                      foregroundColor: AppColors.white,
+                    ),
+                    onPressed: () => context.pop(),
+                  ),
+                  const SizedBox(height: AppDimensions.space8),
+                  Center(
+                    child: TextButton.icon(
+                      icon: const Icon(LucideIcons.edit2, size: 14, color: AppColors.primaryGreen),
+                      onPressed: () => context.go('/profile/wizard'),
+                      label: const Text(
+                        'Update Profile Attributes',
+                        style: TextStyle(color: AppColors.primaryGreen, fontSize: 13, fontWeight: FontWeight.w600),
                       ),
                     ),
-                  ],
-                ),
-                const SizedBox(height: AppDimensions.space8),
-                Container(
-                  padding: const EdgeInsets.all(AppDimensions.space12),
-                  decoration: BoxDecoration(
-                    color: AppColors.surface,
-                    borderRadius: BorderRadius.circular(AppDimensions.radiusCard),
-                    border: Border.all(color: AppColors.border),
                   ),
-                  child: Column(
-                    children: report.requiredDocumentsForVerification.map((doc) {
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: AppDimensions.space8),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Icon(LucideIcons.fileText, size: 14, color: AppColors.primaryGreen),
-                            const SizedBox(width: AppDimensions.space8),
-                            Expanded(
-                              child: Text(
-                                doc,
-                                style: AppTypography.body.copyWith(
-                                  fontSize: 12,
-                                  color: AppColors.textMain,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      );
-                    }).toList(),
-                  ),
-                ),
-                const SizedBox(height: AppDimensions.space24),
-
-                // Actions
-                ElevatedButton.icon(
-                  icon: const Icon(LucideIcons.arrowLeft, size: 16),
-                  label: const Text('Back to Opportunity Details'),
-                  onPressed: () => context.pop(),
-                ),
-                const SizedBox(height: AppDimensions.space8),
-                Center(
-                  child: TextButton.icon(
-                    icon: const Icon(LucideIcons.edit2, size: 14, color: AppColors.primaryGreen),
-                    onPressed: () => context.go('/profile/wizard'),
-                    label: const Text(
-                      'Update Profile Attributes',
-                      style: TextStyle(color: AppColors.primaryGreen, fontSize: 13),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: AppDimensions.space16),
-              ],
+                  const SizedBox(height: AppDimensions.space16),
+                ],
+              ),
             ),
-          ),
-          loading: () => const Center(
-            child: CircularProgressIndicator(color: AppColors.primaryGreen),
-          ),
-          error: (err, _) => Center(
-            child: Padding(
-              padding: const EdgeInsets.all(AppDimensions.space24),
-              child: Text(
-                'Error generating report: $err',
-                style: const TextStyle(color: AppColors.error),
-                textAlign: TextAlign.center,
+            loading: () => const Center(
+              child: CircularProgressIndicator(color: AppColors.primaryGreen),
+            ),
+            error: (err, _) => Center(
+              child: Padding(
+                padding: const EdgeInsets.all(AppDimensions.space24),
+                child: Text(
+                  'Error generating report: $err',
+                  style: const TextStyle(color: AppColors.error),
+                  textAlign: TextAlign.center,
+                ),
               ),
             ),
           ),
         ),
       ),
-    ),
-  );
-}
+    );
+  }
 
-  Widget _buildCriterionCard(EligibilityCriterionResult result) {
+  Widget _buildCriterionCard(BuildContext context, EligibilityCriterionResult result) {
     Color statusColor;
     IconData statusIcon;
 
@@ -319,9 +366,9 @@ class EligibilityReportScreen extends ConsumerWidget {
       margin: const EdgeInsets.only(bottom: AppDimensions.space12),
       padding: const EdgeInsets.all(AppDimensions.space12),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: context.themeCard,
         borderRadius: BorderRadius.circular(AppDimensions.radiusCard),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: context.themeBorder),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -331,7 +378,7 @@ class EligibilityReportScreen extends ConsumerWidget {
             children: [
               Text(
                 result.criterionName,
-                style: AppTypography.cardTitle.copyWith(fontSize: 14),
+                style: AppTypography.cardTitle.copyWith(fontSize: 14, color: context.themeTextMain),
               ),
               Row(
                 children: [
@@ -350,29 +397,29 @@ class EligibilityReportScreen extends ConsumerWidget {
             ],
           ),
           const SizedBox(height: AppDimensions.space8),
-          const Divider(color: AppColors.border, height: 1),
+          Divider(color: context.themeBorder, height: 1),
           const SizedBox(height: AppDimensions.space8),
 
-          _buildRow('Candidate Record:', result.candidateValue),
-          _buildRow('Advertised Norm:', result.requirement),
+          _buildRow(context, 'Candidate Record:', result.candidateValue),
+          _buildRow(context, 'Advertised Norm:', result.requirement),
           if (result.originalScore != null && result.originalScore != result.candidateValue)
-            _buildRow('Original Score:', result.originalScore!),
+            _buildRow(context, 'Original Score:', result.originalScore!),
           if (result.conversionFormula != null)
-            _buildRow('Conversion:', result.conversionFormula!),
+            _buildRow(context, 'Conversion:', result.conversionFormula!),
           if (result.convertedPercentage != null)
-            _buildRow('Converted Percentage:', result.convertedPercentage!),
+            _buildRow(context, 'Converted Percentage:', result.convertedPercentage!),
           if (result.conversionSource != null)
-            _buildRow('Source:', result.conversionSource!),
+            _buildRow(context, 'Source:', result.conversionSource!),
           if (result.comparison != null)
-            _buildRow('Comparison:', result.comparison!),
-          _buildRow('Status:', result.status.label),
+            _buildRow(context, 'Comparison:', result.comparison!),
+          _buildRow(context, 'Status:', result.status.label),
           const SizedBox(height: 6),
           Text(
             result.details,
             style: AppTypography.body.copyWith(
               fontSize: 12,
               height: 1.4,
-              color: AppColors.textMain,
+              color: context.themeTextMain,
             ),
           ),
 
@@ -384,13 +431,13 @@ class EligibilityReportScreen extends ConsumerWidget {
                 vertical: AppDimensions.space4,
               ),
               decoration: BoxDecoration(
-                color: AppColors.secondarySurface,
+                color: context.themeSurfaceElevated,
                 borderRadius: BorderRadius.circular(AppDimensions.radiusSmall),
-                border: Border.all(color: AppColors.border),
+                border: Border.all(color: context.themeBorder),
               ),
               child: Text(
                 'Evidence: ${result.ruleEvidence!}',
-                style: AppTypography.caption.copyWith(color: AppColors.textSubtle, fontSize: 10),
+                style: AppTypography.caption.copyWith(color: context.themeTextSubtle, fontSize: 10),
               ),
             ),
           ],
@@ -399,7 +446,7 @@ class EligibilityReportScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildRow(String label, String value) {
+  Widget _buildRow(BuildContext context, String label, String value) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 4),
       child: Row(
@@ -409,14 +456,14 @@ class EligibilityReportScreen extends ConsumerWidget {
             width: 120,
             child: Text(
               label,
-              style: AppTypography.caption.copyWith(color: AppColors.textMuted, fontSize: 11),
+              style: AppTypography.caption.copyWith(color: context.themeTextMuted, fontSize: 11),
             ),
           ),
           Expanded(
             child: Text(
               value,
               style: AppTypography.caption.copyWith(
-                color: AppColors.textMain,
+                color: context.themeTextMain,
                 fontWeight: FontWeight.w500,
                 fontSize: 11,
               ),

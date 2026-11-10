@@ -178,14 +178,14 @@ class _AuthScreenState extends ConsumerState<AuthScreen> with WidgetsBindingObse
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) => AlertDialog(
-          backgroundColor: AppColors.elevatedSurface,
-          shape: const RoundedRectangleBorder(
+          backgroundColor: context.themeCard,
+          shape: RoundedRectangleBorder(
             borderRadius: AppDimensions.roundedDefault,
-            side: BorderSide(color: AppColors.borders),
+            side: BorderSide(color: context.themeBorder),
           ),
           title: Text(
             'Reset Password',
-            style: AppTypography.screenTitle.copyWith(color: AppColors.mainText),
+            style: AppTypography.screenTitle.copyWith(color: context.themeTextMain),
           ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
@@ -193,16 +193,16 @@ class _AuthScreenState extends ConsumerState<AuthScreen> with WidgetsBindingObse
             children: [
               Text(
                 'Enter your registered email address. Password reset instructions will be sent via official Supabase auth service.',
-                style: AppTypography.bodyMuted.copyWith(color: AppColors.secondaryText),
+                style: AppTypography.bodyMuted.copyWith(color: context.themeTextMuted),
               ),
               const SizedBox(height: AppDimensions.space16),
               TextField(
                 controller: resetEmailController,
                 keyboardType: TextInputType.emailAddress,
-                style: const TextStyle(color: AppColors.mainText),
+                style: TextStyle(color: context.themeTextMain),
                 decoration: const InputDecoration(
                   labelText: 'Email Address',
-                  prefixIcon: Icon(LucideIcons.mail, size: 18, color: AppColors.secondaryText),
+                  prefixIcon: Icon(LucideIcons.mail, size: 18),
                 ),
               ),
               if (message != null) ...[
@@ -298,11 +298,11 @@ class _AuthScreenState extends ConsumerState<AuthScreen> with WidgetsBindingObse
         }
       },
       child: Scaffold(
-        backgroundColor: AppColors.mainBackground,
+        backgroundColor: context.themeBackground,
         appBar: AppBar(
-          backgroundColor: AppColors.mainBackground,
+          backgroundColor: context.themeBackground,
           leading: IconButton(
-            icon: const Icon(LucideIcons.arrowLeft, size: 20),
+            icon: Icon(LucideIcons.arrowLeft, size: 20, color: context.themeTextMain),
             onPressed: () {
               if (_isSignUp) {
                 setState(() => _isSignUp = false);
@@ -337,7 +337,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> with WidgetsBindingObse
                   style: AppTypography.screenTitle.copyWith(
                     fontSize: 22,
                     fontWeight: FontWeight.w700,
-                    color: AppColors.mainText,
+                    color: context.themeTextMain,
                   ),
                 ),
                 const SizedBox(height: AppDimensions.space4),
@@ -345,7 +345,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> with WidgetsBindingObse
                   _isSignUp
                       ? 'Set up your candidate profile to evaluate your eligibility across all Indian recruitment examinations.'
                       : 'Sign in to access your saved opportunities and application deadlines.',
-                  style: AppTypography.bodyMuted.copyWith(color: AppColors.secondaryText),
+                  style: AppTypography.bodyMuted.copyWith(color: context.themeTextMuted),
                 ),
                 const SizedBox(height: AppDimensions.space24),
 
@@ -381,11 +381,11 @@ class _AuthScreenState extends ConsumerState<AuthScreen> with WidgetsBindingObse
                     controller: _nameController,
                     textInputAction: TextInputAction.next,
                     keyboardType: TextInputType.name,
-                    style: const TextStyle(color: AppColors.mainText),
+                    style: TextStyle(color: context.themeTextMain),
                     decoration: const InputDecoration(
                       labelText: 'Full Legal Name',
                       hintText: 'e.g. Vikramaditya Rathore',
-                      prefixIcon: Icon(LucideIcons.user, size: 18, color: AppColors.secondaryText),
+                      prefixIcon: Icon(LucideIcons.user, size: 18),
                     ),
                     validator: (val) {
                       if (val == null || val.trim().isEmpty) {
@@ -402,11 +402,11 @@ class _AuthScreenState extends ConsumerState<AuthScreen> with WidgetsBindingObse
                   controller: _emailController,
                   textInputAction: TextInputAction.next,
                   keyboardType: TextInputType.emailAddress,
-                  style: const TextStyle(color: AppColors.mainText),
+                  style: TextStyle(color: context.themeTextMain),
                   decoration: const InputDecoration(
                     labelText: 'Email Address',
                     hintText: 'name@example.com',
-                    prefixIcon: Icon(LucideIcons.mail, size: 18, color: AppColors.secondaryText),
+                    prefixIcon: Icon(LucideIcons.mail, size: 18),
                   ),
                   validator: (val) {
                     if (val == null || val.trim().isEmpty) {
@@ -425,18 +425,17 @@ class _AuthScreenState extends ConsumerState<AuthScreen> with WidgetsBindingObse
                   controller: _passwordController,
                   obscureText: _obscurePassword,
                   textInputAction: _isSignUp ? TextInputAction.next : TextInputAction.done,
-                  style: const TextStyle(color: AppColors.mainText),
+                  style: TextStyle(color: context.themeTextMain),
                   onChanged: (_) {
                     if (_isSignUp) setState(() {});
                   },
                   decoration: InputDecoration(
                     labelText: 'Password',
-                    prefixIcon: const Icon(LucideIcons.lock, size: 18, color: AppColors.secondaryText),
+                    prefixIcon: const Icon(LucideIcons.lock, size: 18),
                     suffixIcon: IconButton(
                       icon: Icon(
                         _obscurePassword ? LucideIcons.eyeOff : LucideIcons.eye,
                         size: 18,
-                        color: AppColors.secondaryText,
                       ),
                       onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
                     ),
@@ -462,7 +461,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> with WidgetsBindingObse
                           borderRadius: BorderRadius.circular(2),
                           child: LinearProgressIndicator(
                             value: passwordStrength / 4.0,
-                            backgroundColor: AppColors.secondarySurface,
+                            backgroundColor: context.themeSurfaceElevated,
                             valueColor: AlwaysStoppedAnimation<Color>(_getStrengthColor(passwordStrength)),
                             minHeight: 4,
                           ),
@@ -507,15 +506,14 @@ class _AuthScreenState extends ConsumerState<AuthScreen> with WidgetsBindingObse
                     controller: _confirmPasswordController,
                     obscureText: _obscureConfirmPassword,
                     textInputAction: TextInputAction.done,
-                    style: const TextStyle(color: AppColors.mainText),
+                    style: TextStyle(color: context.themeTextMain),
                     decoration: InputDecoration(
                       labelText: 'Confirm Password',
-                      prefixIcon: const Icon(LucideIcons.lock, size: 18, color: AppColors.secondaryText),
+                      prefixIcon: const Icon(LucideIcons.lock, size: 18),
                       suffixIcon: IconButton(
                         icon: Icon(
                           _obscureConfirmPassword ? LucideIcons.eyeOff : LucideIcons.eye,
                           size: 18,
-                          color: AppColors.secondaryText,
                         ),
                         onPressed: () => setState(() => _obscureConfirmPassword = !_obscureConfirmPassword),
                       ),
@@ -537,9 +535,9 @@ class _AuthScreenState extends ConsumerState<AuthScreen> with WidgetsBindingObse
                         height: 24,
                         child: Checkbox(
                           value: _termsAccepted,
-                          activeColor: AppColors.white,
-                          checkColor: AppColors.black,
-                          side: const BorderSide(color: AppColors.borders),
+                          activeColor: AppColors.primaryGreen,
+                          checkColor: AppColors.white,
+                          side: BorderSide(color: context.themeBorder),
                           onChanged: (val) => setState(() => _termsAccepted = val ?? false),
                         ),
                       ),
@@ -547,7 +545,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> with WidgetsBindingObse
                       Expanded(
                         child: Text(
                           'I agree to the Terms of Service & Privacy Policy',
-                          style: AppTypography.caption.copyWith(color: AppColors.secondaryText),
+                          style: AppTypography.caption.copyWith(color: context.themeTextMuted),
                         ),
                       ),
                     ],
@@ -559,13 +557,18 @@ class _AuthScreenState extends ConsumerState<AuthScreen> with WidgetsBindingObse
                 // Submit Button
                 ElevatedButton(
                   onPressed: _isLoading ? null : _submit,
+                  style: ElevatedButton.styleFrom(
+                    minimumSize: const Size.fromHeight(48),
+                    backgroundColor: AppColors.primaryGreen,
+                    foregroundColor: AppColors.white,
+                  ),
                   child: _isLoading
                       ? const SizedBox(
                           width: 20,
                           height: 20,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(AppColors.mainBackground),
+                            valueColor: AlwaysStoppedAnimation<Color>(AppColors.white),
                           ),
                         )
                       : Text(_isSignUp ? 'Create Account' : 'Sign In'),
@@ -575,18 +578,18 @@ class _AuthScreenState extends ConsumerState<AuthScreen> with WidgetsBindingObse
                 // Divider: OR
                 Row(
                   children: [
-                    const Expanded(child: Divider(color: AppColors.borders)),
+                    Expanded(child: Divider(color: context.themeBorder)),
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: AppDimensions.space12),
                       child: Text(
                         'OR',
                         style: AppTypography.caption.copyWith(
-                          color: AppColors.mutedText,
+                          color: context.themeTextSubtle,
                           letterSpacing: 1.0,
                         ),
                       ),
                     ),
-                    const Expanded(child: Divider(color: AppColors.borders)),
+                    Expanded(child: Divider(color: context.themeBorder)),
                   ],
                 ),
                 const SizedBox(height: AppDimensions.space20),
@@ -595,8 +598,9 @@ class _AuthScreenState extends ConsumerState<AuthScreen> with WidgetsBindingObse
                 OutlinedButton(
                   onPressed: _isLoading ? null : _handleGoogleSignIn,
                   style: OutlinedButton.styleFrom(
-                    backgroundColor: AppColors.elevatedSurface,
-                    side: const BorderSide(color: AppColors.borders),
+                    backgroundColor: context.themeCard,
+                    side: BorderSide(color: context.themeBorder),
+                    minimumSize: const Size.fromHeight(48),
                   ),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -605,7 +609,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> with WidgetsBindingObse
                       const SizedBox(width: AppDimensions.space12),
                       Text(
                         'Continue with Google',
-                        style: AppTypography.button.copyWith(color: AppColors.mainText),
+                        style: AppTypography.button.copyWith(color: context.themeTextMain),
                       ),
                     ],
                   ),
@@ -618,7 +622,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> with WidgetsBindingObse
                   children: [
                     Text(
                       _isSignUp ? 'Already have an account?' : 'Don\'t have an account?',
-                      style: AppTypography.caption.copyWith(color: AppColors.secondaryText),
+                      style: AppTypography.caption.copyWith(color: context.themeTextMuted),
                     ),
                     TextButton(
                       onPressed: () {
