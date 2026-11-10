@@ -7,6 +7,7 @@ import 'package:rexam/core/constants/app_colors.dart';
 import 'package:rexam/core/constants/app_dimensions.dart';
 import 'package:rexam/core/theme/app_typography.dart';
 import 'package:rexam/core/utils/date_formatter.dart';
+import 'package:rexam/models/examination.dart';
 import 'package:rexam/features/eligibility/domain/eligibility_report.dart';
 import 'package:rexam/features/eligibility/presentation/providers/eligibility_provider.dart';
 import 'package:rexam/features/opportunities/presentation/widgets/status_badge.dart';
@@ -114,9 +115,7 @@ class EligibilityReportScreen extends ConsumerWidget {
                         const SizedBox(height: AppDimensions.space12),
 
                         // Prominent Incomplete Information Banner if unconfirmed or incomplete
-                        if (report.overallStatus == EligibilityStatus.unconfirmed ||
-                            report.overallStatus == EligibilityStatus.missingInformation ||
-                            report.overallStatus == EligibilityStatus.needsVerification ||
+                        if (report.overallStatus == EligibilityStatus.missingInformation ||
                             report.criteriaResults.isEmpty ||
                             report.criteriaResults.any((c) => c.status == RuleCheckStatus.needsConfirmation)) ...[
                           Container(

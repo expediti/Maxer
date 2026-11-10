@@ -8,12 +8,12 @@ import '../../domain/opportunity_filter.dart';
 import '../providers/opportunities_provider.dart';
 
 class FilterSheet extends ConsumerStatefulWidget {
-  final OpportunityFilter? currentFilter;
+  final OpportunityFilter currentFilter;
   final ValueChanged<OpportunityFilter>? onApply;
 
   const FilterSheet({
     super.key,
-    this.currentFilter,
+    this.currentFilter = const OpportunityFilter(),
     this.onApply,
   });
 
@@ -62,7 +62,7 @@ class _FilterSheetState extends ConsumerState<FilterSheet> {
   @override
   void initState() {
     super.initState();
-    final current = widget.currentFilter ?? ref.read(opportunityFilterProvider);
+    final current = widget.currentFilter;
     _sortOption = current.sortOption;
     _orgController = TextEditingController(text: current.organisation ?? '');
     _selectedCategory = current.category;
@@ -100,7 +100,7 @@ class _FilterSheetState extends ConsumerState<FilterSheet> {
   }
 
   void _apply() {
-    final baseFilter = widget.currentFilter ?? ref.read(opportunityFilterProvider);
+    final baseFilter = widget.currentFilter;
     final updated = baseFilter.copyWith(
       sortOption: _sortOption,
       organisation: _orgController.text.trim().isEmpty ? null : _orgController.text.trim(),

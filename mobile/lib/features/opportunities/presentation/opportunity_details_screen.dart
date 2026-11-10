@@ -998,7 +998,6 @@ class OpportunityDetailsScreen extends ConsumerWidget {
     String statusSummary;
 
     final isInfoIncomplete = report.overallStatus == EligibilityStatus.missingInformation ||
-        report.overallStatus == EligibilityStatus.needsVerification ||
         opportunity.uncertainFields.isNotEmpty;
 
     if (isInfoIncomplete) {
@@ -1023,8 +1022,6 @@ class OpportunityDetailsScreen extends ConsumerWidget {
           statusSummary = report.overallSummary;
           break;
         case EligibilityStatus.missingInformation:
-        case EligibilityStatus.needsVerification:
-        case EligibilityStatus.unconfirmed:
           dotColor = AppColors.pending;
           statusTitle = 'Eligibility Information Incomplete';
           statusSummary = 'Eligibility cannot be confirmed because official information is incomplete.';

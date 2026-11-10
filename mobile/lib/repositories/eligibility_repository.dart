@@ -452,14 +452,14 @@ class DeterministicEligibilityRepository implements EligibilityRepository {
     EligibilityStatus overallStatus;
     String overallSummary;
 
-    if (criteriaResults.isEmpty || (examination.educationalQualifications.isEmpty && examination.minAge == null && examination.maxAge == null)) {
-      overallStatus = EligibilityStatus.unconfirmed;
+    if (results.isEmpty || (examination.educationalQualifications.isEmpty && examination.minAge == null && examination.maxAge == null)) {
+      overallStatus = EligibilityStatus.missingInformation;
       overallSummary = 'Eligibility cannot be confirmed because official information is incomplete.';
     } else if (hasAnyFailure) {
       overallStatus = EligibilityStatus.notEligible;
       overallSummary = 'You do not currently satisfy one or more mandatory statutory criteria for this examination.';
     } else if (hasNeedsConfirmation) {
-      overallStatus = EligibilityStatus.needsVerification;
+      overallStatus = EligibilityStatus.missingInformation;
       overallSummary = 'Official institutional verification required. One or more criteria require verified conversion certificates or institutional documentation before statutory eligibility can be confirmed.';
     } else if (hasConditionalPass) {
       overallStatus = EligibilityStatus.potentiallyEligible;

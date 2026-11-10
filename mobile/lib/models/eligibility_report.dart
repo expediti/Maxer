@@ -1,4 +1,5 @@
 import 'examination.dart';
+export 'examination.dart' show EligibilityStatus;
 
 enum RuleCheckStatus {
   passed('Satisfied'),

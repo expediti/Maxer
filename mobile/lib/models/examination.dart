@@ -87,9 +87,11 @@ enum EligibilityStatus {
   eligible('Eligible'),
   potentiallyEligible('Potentially Eligible'),
   notEligible('Not Eligible'),
-  missingInformation('Review Needed'),
-  needsVerification('Needs Verification'),
-  unconfirmed('Unconfirmed');
+  missingInformation('Review Needed');
+
+  // Static constants for backward-compatibility with tests and legacy references
+  static const EligibilityStatus needsVerification = EligibilityStatus.missingInformation;
+  static const EligibilityStatus unconfirmed = EligibilityStatus.missingInformation;
 
   final String label;
   const EligibilityStatus(this.label);

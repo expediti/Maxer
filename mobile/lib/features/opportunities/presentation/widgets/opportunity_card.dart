@@ -48,7 +48,7 @@ class OpportunityCard extends ConsumerWidget {
               )
             : null);
 
-    final status = report?.overallStatus ?? EligibilityStatus.needsVerification;
+    final status = report?.overallStatus ?? EligibilityStatus.missingInformation;
 
     return Material(
       color: Colors.transparent,
