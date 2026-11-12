@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="120" height="120">
+  <circle cx="60" cy="60" r="56" fill="#141E28" stroke="#1E88E5" stroke-width="2"/>
+  <!-- DRDO Radar / Aerospace wings -->
+  <path d="M60 22 L72 50 L60 44 L48 50 Z" fill="#E53935"/>
+  <path d="M22 62 L48 56 L42 66 L22 68 Z" fill="#1E88E5"/>
+  <path d="M98 62 L72 56 L78 66 L98 68 Z" fill="#1E88E5"/>
+  <circle cx="60" cy="62" r="14" fill="#0D1B2A" stroke="#FFD700" stroke-width="2"/>
+  <circle cx="60" cy="62" r="4" fill="#FFD700"/>
+  <text x="60" y="98" font-family="Arial, sans-serif" font-size="11" font-weight="bold" fill="#F0F4F8" text-anchor="middle" letter-spacing="2">DRDO</text>
+</svg>

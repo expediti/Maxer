@@ -18,7 +18,10 @@ class StructuredExtractionResult(BaseModel):
     category_age_relaxations: Dict[str, str] = Field(default_factory=dict, description="Age relaxation rules per category")
     educational_qualifications: list[str] = Field(default_factory=list, description="Mandatory degree/diploma requirements")
     eligible_streams: list[str] = Field(default_factory=list, description="Eligible branches or disciplines")
-    min_percentage: Optional[float] = Field(default=None, description="Minimum percentage or CGPA required")
+    min_percentage: Optional[float] = Field(default=None, description="Minimum aggregate percentage required (0-100)")
+    min_cgpa: Optional[float] = Field(default=None, description="Minimum CGPA cutoff required (e.g. 6.84 or 7.0)")
+    grading_type: str = Field(default="percentage", description="Prescribed grading type: percentage, cgpa, or any")
+    cgpa_scale_max: float = Field(default=10.0, description="Grading scale max for CGPA")
     application_opening_date: Optional[str] = Field(default=None, description="ISO format opening date")
     application_closing_date: Optional[str] = Field(default=None, description="ISO format deadline date")
     prelims_exam_date: Optional[str] = Field(default=None, description="ISO format preliminary exam date")
@@ -64,7 +67,9 @@ Extract key details from the following notification text into strict JSON matchi
 - category_age_relaxations: object mapping category names to relaxation descriptions
 - educational_qualifications: list of strings
 - eligible_streams: list of strings
-- min_percentage: float or null
+- min_percentage: float or null (for percentage cutoffs, e.g. 50.0 or 60.0)
+- min_cgpa: float or null (for CGPA cutoffs, e.g. 6.84 or 7.0)
+- grading_type: string ("percentage", "cgpa", or "any")
 - application_opening_date: YYYY-MM-DD or null
 - application_closing_date: YYYY-MM-DD or null
 - prelims_exam_date: YYYY-MM-DD or null

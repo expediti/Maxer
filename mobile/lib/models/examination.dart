@@ -133,6 +133,17 @@ class Examination {
   final String feeExemptions;
   final List<String> requiredDocuments;
   final Map<String, DateTime?> importantDates;
+  // 10 Independent, unmerged statutory date fields
+  final DateTime? notificationDate;
+  final DateTime? applicationStartDate;
+  final DateTime? applicationEndDate;
+  final DateTime? correctionStartDate;
+  final DateTime? correctionEndDate;
+  final DateTime? admitCardDate;
+  final DateTime? examStartDate;
+  final DateTime? examEndDate;
+  final DateTime? resultDate;
+  final DateTime? ageCutoffDate;
   final String selectionProcedure;
   final String? examPattern;
   final String? salaryOrPayScale;
@@ -202,6 +213,16 @@ class Examination {
     this.feeExemptions = '',
     this.requiredDocuments = const [],
     this.importantDates = const {},
+    this.notificationDate,
+    this.applicationStartDate,
+    this.applicationEndDate,
+    this.correctionStartDate,
+    this.correctionEndDate,
+    this.admitCardDate,
+    this.examStartDate,
+    this.examEndDate,
+    this.resultDate,
+    this.ageCutoffDate,
     this.selectionProcedure = '',
     this.examPattern,
     this.salaryOrPayScale,
@@ -231,11 +252,6 @@ class Examination {
     this.verifiedNotificationUrl,
     this.evidence = const {},
   });
-
-  DateTime? get applicationStartDate =>
-      importantDates['Application Start'] ??
-      importantDates['Application Start Date'] ??
-      importantDates['Start Date'];
 
   Examination copyWith({
     String? id,
@@ -273,6 +289,16 @@ class Examination {
     String? feeExemptions,
     List<String>? requiredDocuments,
     Map<String, DateTime?>? importantDates,
+    DateTime? notificationDate,
+    DateTime? applicationStartDate,
+    DateTime? applicationEndDate,
+    DateTime? correctionStartDate,
+    DateTime? correctionEndDate,
+    DateTime? admitCardDate,
+    DateTime? examStartDate,
+    DateTime? examEndDate,
+    DateTime? resultDate,
+    DateTime? ageCutoffDate,
     String? selectionProcedure,
     String? examPattern,
     String? salaryOrPayScale,
@@ -335,6 +361,16 @@ class Examination {
       feeExemptions: feeExemptions ?? this.feeExemptions,
       requiredDocuments: requiredDocuments ?? this.requiredDocuments,
       importantDates: importantDates ?? this.importantDates,
+      notificationDate: notificationDate ?? this.notificationDate,
+      applicationStartDate: applicationStartDate ?? this.applicationStartDate,
+      applicationEndDate: applicationEndDate ?? this.applicationEndDate,
+      correctionStartDate: correctionStartDate ?? this.correctionStartDate,
+      correctionEndDate: correctionEndDate ?? this.correctionEndDate,
+      admitCardDate: admitCardDate ?? this.admitCardDate,
+      examStartDate: examStartDate ?? this.examStartDate,
+      examEndDate: examEndDate ?? this.examEndDate,
+      resultDate: resultDate ?? this.resultDate,
+      ageCutoffDate: ageCutoffDate ?? this.ageCutoffDate,
       selectionProcedure: selectionProcedure ?? this.selectionProcedure,
       examPattern: examPattern ?? this.examPattern,
       salaryOrPayScale: salaryOrPayScale ?? this.salaryOrPayScale,
@@ -394,33 +430,62 @@ class Examination {
       org = Map<String, dynamic>.from(json['organisations'] as Map);
     }
 
-    DateTime? closingDate;
-    if (dates['application_closing_date'] != null) {
-      closingDate = DateTime.tryParse(dates['application_closing_date'].toString());
-    } else if (json['application_close_date'] != null) {
-      closingDate = DateTime.tryParse(json['application_close_date'].toString());
-    }
-    closingDate ??= DateTime.now().add(const Duration(days: 30));
+    // -------------------------------------------------------------------------
+    // Exact parsing of 10 independent date fields (No fallback generation)
+    // -------------------------------------------------------------------------
+    final DateTime? notificationDate = DateTime.tryParse(dates['notification_date']?.toString() ?? '') ??
+        DateTime.tryParse(json['notification_date']?.toString() ?? '');
 
+    final DateTime? applicationStartDate = DateTime.tryParse(dates['application_opening_date']?.toString() ?? '') ??
+        DateTime.tryParse(dates['application_start_date']?.toString() ?? '') ??
+        DateTime.tryParse(json['application_start_date']?.toString() ?? '') ??
+        DateTime.tryParse(json['application_open_date']?.toString() ?? '');
+
+    final DateTime? applicationEndDate = DateTime.tryParse(dates['application_closing_date']?.toString() ?? '') ??
+        DateTime.tryParse(dates['application_end_date']?.toString() ?? '') ??
+        DateTime.tryParse(json['application_end_date']?.toString() ?? '') ??
+        DateTime.tryParse(json['application_close_date']?.toString() ?? '');
+
+    final DateTime? correctionStartDate = DateTime.tryParse(dates['correction_window_start']?.toString() ?? '') ??
+        DateTime.tryParse(dates['correction_start_date']?.toString() ?? '') ??
+        DateTime.tryParse(json['correction_start_date']?.toString() ?? '');
+
+    final DateTime? correctionEndDate = DateTime.tryParse(dates['correction_window_end']?.toString() ?? '') ??
+        DateTime.tryParse(dates['correction_end_date']?.toString() ?? '') ??
+        DateTime.tryParse(json['correction_end_date']?.toString() ?? '');
+
+    final DateTime? admitCardDate = DateTime.tryParse(dates['admit_card_release_date']?.toString() ?? '') ??
+        DateTime.tryParse(dates['admit_card_date']?.toString() ?? '') ??
+        DateTime.tryParse(json['admit_card_date']?.toString() ?? '');
+
+    final DateTime? examStartDate = DateTime.tryParse(dates['examination_start_date']?.toString() ?? '') ??
+        DateTime.tryParse(dates['exam_start_date']?.toString() ?? '') ??
+        DateTime.tryParse(dates['prelims_date']?.toString() ?? '') ??
+        DateTime.tryParse(json['exam_start_date']?.toString() ?? '') ??
+        DateTime.tryParse(json['examination_date']?.toString() ?? '');
+
+    final DateTime? examEndDate = DateTime.tryParse(dates['examination_end_date']?.toString() ?? '') ??
+        DateTime.tryParse(dates['exam_end_date']?.toString() ?? '') ??
+        DateTime.tryParse(json['exam_end_date']?.toString() ?? '');
+
+    final DateTime? resultDate = DateTime.tryParse(dates['result_date']?.toString() ?? '') ??
+        DateTime.tryParse(json['result_date']?.toString() ?? '');
+
+    final DateTime? ageCutoffDate = DateTime.tryParse(rules['age_cutoff_date']?.toString() ?? '') ??
+        DateTime.tryParse(json['age_cutoff_date']?.toString() ?? '');
+
+    // Synchronize importantDates map with clean human labels
     Map<String, DateTime?> importantDatesMap = {};
-    if (dates['notification_date'] != null) {
-      importantDatesMap['Notification Date'] = DateTime.tryParse(dates['notification_date'].toString());
-    }
-    if (dates['application_opening_date'] != null) {
-      importantDatesMap['Application Start'] = DateTime.tryParse(dates['application_opening_date'].toString());
-    } else if (json['application_open_date'] != null) {
-      importantDatesMap['Application Start'] = DateTime.tryParse(json['application_open_date'].toString());
-    }
-    if (dates['application_closing_date'] != null) {
-      importantDatesMap['Application Deadline'] = DateTime.tryParse(dates['application_closing_date'].toString());
-    } else if (json['application_close_date'] != null) {
-      importantDatesMap['Application Deadline'] = DateTime.tryParse(json['application_close_date'].toString());
-    }
-    if (dates['examination_start_date'] != null) {
-      importantDatesMap['Examination Date'] = DateTime.tryParse(dates['examination_start_date'].toString());
-    } else if (json['examination_date'] != null) {
-      importantDatesMap['Examination Date'] = DateTime.tryParse(json['examination_date'].toString());
-    }
+    if (notificationDate != null) importantDatesMap['Notification Date'] = notificationDate;
+    if (applicationStartDate != null) importantDatesMap['Application Start'] = applicationStartDate;
+    if (applicationEndDate != null) importantDatesMap['Application Deadline'] = applicationEndDate;
+    if (correctionStartDate != null) importantDatesMap['Correction Start'] = correctionStartDate;
+    if (correctionEndDate != null) importantDatesMap['Correction Deadline'] = correctionEndDate;
+    if (admitCardDate != null) importantDatesMap['Admit Card Release'] = admitCardDate;
+    if (examStartDate != null) importantDatesMap['Examination Date'] = examStartDate;
+    if (examEndDate != null) importantDatesMap['Examination Concludes'] = examEndDate;
+    if (resultDate != null) importantDatesMap['Result Declaration'] = resultDate;
+    if (ageCutoffDate != null) importantDatesMap['Age Cutoff Date'] = ageCutoffDate;
 
     final categoryStr = json['category']?.toString() ?? '';
     final oppTypeStr = json['opportunity_type']?.toString();
@@ -488,6 +553,16 @@ class Examination {
           (json['required_documents'] as List?)?.map((e) => e.toString()).toList() ??
           ['Class 10 Certificate', 'Degree Marksheet', 'Category Certificate if claiming relaxation'],
       importantDates: importantDatesMap,
+      notificationDate: notificationDate,
+      applicationStartDate: applicationStartDate,
+      applicationEndDate: applicationEndDate,
+      correctionStartDate: correctionStartDate,
+      correctionEndDate: correctionEndDate,
+      admitCardDate: admitCardDate,
+      examStartDate: examStartDate,
+      examEndDate: examEndDate,
+      resultDate: resultDate,
+      ageCutoffDate: ageCutoffDate,
       selectionProcedure: json['selection_procedure']?.toString() ??
           json['selection_process']?.toString() ??
           'Written examination followed by interview.',
@@ -501,7 +576,7 @@ class Examination {
       sourceUrl: json['source_url']?.toString() ?? '',
       lastVerifiedAt: DateTime.tryParse(json['last_verified_at']?.toString() ?? '') ?? DateTime.now(),
       isOfficialSource: json['is_official_source'] == true,
-      applicationDeadline: closingDate,
+      applicationDeadline: applicationEndDate,
       isCentralGovernment: json['is_central_government'] != false,
       state: json['state']?.toString(),
       isConfirmed: json['is_confirmed'] != false,

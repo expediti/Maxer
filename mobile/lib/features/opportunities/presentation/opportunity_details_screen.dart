@@ -808,30 +808,35 @@ class OpportunityDetailsScreen extends ConsumerWidget {
   Widget _buildStructuredTimeline(BuildContext context, Opportunity opportunity) {
     final List<Map<String, dynamic>> timelineItems = [];
 
-    if (opportunity.importantDates.containsKey('notification_date') ||
-        opportunity.importantDates.containsKey('Notification Released')) {
-      final d = opportunity.importantDates['notification_date'] ?? opportunity.importantDates['Notification Released'];
-      if (d != null) {
-        timelineItems.add({
-          'title': 'Notification Released',
-          'date': d,
-          'isPast': DateTime.now().isAfter(d),
-          'isHighlight': false,
-        });
-      }
-    }
-
-    final start = opportunity.applicationStartDate;
-    if (start != null) {
+    // 1. Official Notification Date
+    final notifDate = opportunity.notificationDate ??
+        opportunity.importantDates['Notification Date'] ??
+        opportunity.importantDates['notification_date'];
+    if (notifDate != null) {
       timelineItems.add({
-        'title': 'Applications Open',
-        'date': start,
-        'isPast': DateTime.now().isAfter(start),
+        'title': 'Notification Released',
+        'date': notifDate,
+        'isPast': DateTime.now().isAfter(notifDate),
         'isHighlight': false,
       });
     }
 
-    final deadline = opportunity.applicationDeadline;
+    // 2. Application Start Date (Never conflated with Notification Date)
+    final startDate = opportunity.applicationStartDate ??
+        opportunity.importantDates['Application Start'];
+    if (startDate != null) {
+      timelineItems.add({
+        'title': 'Applications Open',
+        'date': startDate,
+        'isPast': DateTime.now().isAfter(startDate),
+        'isHighlight': false,
+      });
+    }
+
+    // 3. Application Deadline
+    final deadline = opportunity.applicationEndDate ??
+        opportunity.applicationDeadline ??
+        opportunity.importantDates['Application Deadline'];
     if (deadline != null) {
       timelineItems.add({
         'title': 'Application Deadline',
@@ -841,52 +846,98 @@ class OpportunityDetailsScreen extends ConsumerWidget {
       });
     }
 
-    if (opportunity.importantDates.containsKey('Admit Card Release') ||
-        opportunity.importantDates.containsKey('admit_card_date')) {
-      final d = opportunity.importantDates['Admit Card Release'] ?? opportunity.importantDates['admit_card_date'];
-      if (d != null) {
-        timelineItems.add({
-          'title': 'Admit Card Release',
-          'date': d,
-          'isPast': DateTime.now().isAfter(d),
-          'isHighlight': false,
-        });
-      }
+    // 4. Correction Window
+    final corrStart = opportunity.correctionStartDate ??
+        opportunity.importantDates['Correction Start'];
+    final corrEnd = opportunity.correctionEndDate ??
+        opportunity.importantDates['Correction Deadline'];
+    if (corrStart != null) {
+      timelineItems.add({
+        'title': corrEnd != null ? 'Correction Window Opens' : 'Correction Window',
+        'date': corrStart,
+        'isPast': DateTime.now().isAfter(corrStart),
+        'isHighlight': false,
+      });
+    }
+    if (corrEnd != null) {
+      timelineItems.add({
+        'title': 'Correction Deadline',
+        'date': corrEnd,
+        'isPast': DateTime.now().isAfter(corrEnd),
+        'isHighlight': false,
+      });
     }
 
-    final examDate = opportunity.importantDates['Examination Date'] ??
-        opportunity.importantDates['prelims_date'] ??
-        opportunity.importantDates['prelims_exam_date'];
+    // 5. Admit Card Release
+    final admitDate = opportunity.admitCardDate ??
+        opportunity.importantDates['Admit Card Release'] ??
+        opportunity.importantDates['admit_card_date'];
+    if (admitDate != null) {
+      timelineItems.add({
+        'title': 'Admit Card Release',
+        'date': admitDate,
+        'isPast': DateTime.now().isAfter(admitDate),
+        'isHighlight': false,
+      });
+    }
+
+    // 6. Examination Start Date
+    final examDate = opportunity.examStartDate ??
+        opportunity.importantDates['Examination Date'] ??
+        opportunity.importantDates['prelims_date'];
     if (examDate != null) {
       timelineItems.add({
-        'title': 'Examination Date',
+        'title': opportunity.examEndDate != null ? 'Examination Starts' : 'Examination Date',
         'date': examDate,
         'isPast': DateTime.now().isAfter(examDate),
         'isHighlight': false,
       });
     }
 
-    if (opportunity.importantDates.containsKey('Result Declaration') ||
-        opportunity.importantDates.containsKey('result_date')) {
-      final d = opportunity.importantDates['Result Declaration'] ?? opportunity.importantDates['result_date'];
-      if (d != null) {
-        timelineItems.add({
-          'title': 'Result Declaration',
-          'date': d,
-          'isPast': DateTime.now().isAfter(d),
-          'isHighlight': false,
-        });
-      }
+    // 7. Examination End Date
+    final examEnd = opportunity.examEndDate ??
+        opportunity.importantDates['Examination Concludes'];
+    if (examEnd != null && examEnd != examDate) {
+      timelineItems.add({
+        'title': 'Examination Concludes',
+        'date': examEnd,
+        'isPast': DateTime.now().isAfter(examEnd),
+        'isHighlight': false,
+      });
     }
 
-    // Fallback if none in map: show application deadline
-    if (timelineItems.isEmpty && opportunity.applicationDeadline != null) {
+    // 8. Result Declaration
+    final resultDate = opportunity.resultDate ??
+        opportunity.importantDates['Result Declaration'] ??
+        opportunity.importantDates['result_date'];
+    if (resultDate != null) {
       timelineItems.add({
-        'title': 'Application Deadline',
-        'date': opportunity.applicationDeadline!,
-        'isPast': DateTime.now().isAfter(opportunity.applicationDeadline!),
-        'isHighlight': true,
+        'title': 'Result Declaration',
+        'date': resultDate,
+        'isPast': DateTime.now().isAfter(resultDate),
+        'isHighlight': false,
       });
+    }
+
+    if (timelineItems.isEmpty) {
+      return Container(
+        padding: const EdgeInsets.all(AppDimensions.space16),
+        decoration: BoxDecoration(
+          color: context.themeCard,
+          borderRadius: BorderRadius.circular(AppDimensions.radiusCard),
+          border: Border.all(color: context.themeBorder),
+        ),
+        child: Row(
+          children: [
+            const Icon(LucideIcons.calendar, size: 16, color: AppColors.mutedText),
+            const SizedBox(width: AppDimensions.space8),
+            Text(
+              'Official examination schedule not yet announced.',
+              style: AppTypography.caption.copyWith(color: context.themeTextMuted),
+            ),
+          ],
+        ),
+      );
     }
 
     return Container(

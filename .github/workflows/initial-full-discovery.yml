@@ -1,0 +1,88 @@
+name: Rexam Initial Full Discovery
+
+on:
+  workflow_dispatch:
+    inputs:
+      category:
+        description: 'Optional category filter (leave blank to crawl all categories)'
+        required: false
+        type: string
+        default: ''
+      source:
+        description: 'Optional source slug or ID'
+        required: false
+        type: string
+        default: ''
+      limit:
+        description: 'Optional batch limit (leave blank for unlimited full scan)'
+        required: false
+        type: string
+        default: ''
+      force_rescan:
+        description: 'Bypass document deduplication cache and re-extract all notices'
+        type: boolean
+        required: false
+        default: true
+
+concurrency:
+  group: rexam-initial-full-discovery
+  cancel-in-progress: false
+
+jobs:
+  full_discovery:
+    name: Execute Master Opportunity Discovery
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+
+    steps:
+      - name: Checkout Codebase
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+          cache-dependency-path: 'engine/requirements.txt'
+
+      - name: Install Ingestion Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r engine/requirements.txt
+
+      - name: Execute Master Opportunity Discovery Run
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_AI_MODEL: ${{ secrets.CLOUDFLARE_AI_MODEL || '@cf/meta/llama-3.1-8b-instruct' }}
+          ENVIRONMENT: 'production'
+          RATE_LIMIT_DELAY_SECONDS: '2.0'
+        run: |
+          ARGS="--initial-run"
+          if [ -n "${{ inputs.category }}" ]; then
+            ARGS="$ARGS --category '${{ inputs.category }}'"
+          fi
+          if [ -n "${{ inputs.source }}" ]; then
+            ARGS="$ARGS --source '${{ inputs.source }}'"
+          fi
+          if [ -n "${{ inputs.limit }}" ]; then
+            ARGS="$ARGS --limit ${{ inputs.limit }}"
+          fi
+          if [ "${{ inputs.force_rescan }}" = "true" ]; then
+            ARGS="$ARGS --rescan"
+          fi
+
+          eval "python -m engine.app.jobs.initial_full_discovery_job $ARGS"
+
+      - name: Upload Full Run Execution Diagnostics & Observability Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: full-discovery-diagnostics
+          path: |
+            /tmp/rexam_discovery_checkpoint.json
+            /tmp/rexam_downloads/
+          retention-days: 14
+

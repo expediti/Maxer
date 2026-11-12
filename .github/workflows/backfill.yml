@@ -1,0 +1,104 @@
+name: Rexam Opportunity Catalogue Backfill
+
+on:
+  workflow_dispatch:
+    inputs:
+      populate_master_catalogue:
+        description: 'Seed authentic master catalogue opportunities (UPSC, SSC, Railways, Banking, All 36 States/UTs, Defence, Research, PSUs, etc.)'
+        type: boolean
+        required: true
+        default: true
+      run_full_crawlers:
+        description: 'Also execute live source crawlers across all registered portals'
+        type: boolean
+        required: false
+        default: true
+      force_rescan:
+        description: 'Bypass document deduplication cache'
+        type: boolean
+        required: false
+        default: true
+
+concurrency:
+  group: rexam-catalogue-backfill
+  cancel-in-progress: false
+
+jobs:
+  backfill:
+    name: Execute Master Opportunity Catalogue Backfill
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+
+    steps:
+      - name: Checkout Codebase
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+          cache-dependency-path: 'engine/requirements.txt'
+
+      - name: Install Ingestion Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r engine/requirements.txt
+
+      - name: Seed Master Opportunity Catalogue
+        if: ${{ inputs.populate_master_catalogue }}
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          ENVIRONMENT: 'production'
+        run: |
+          PYTHONPATH=. python engine/app/discovery/catalogue_expansion.py
+
+      - name: Run Live Full Opportunity Discovery
+        if: ${{ inputs.run_full_crawlers }}
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_AI_MODEL: ${{ secrets.CLOUDFLARE_AI_MODEL || '@cf/meta/llama-3.1-8b-instruct' }}
+          ENVIRONMENT: 'production'
+          RATE_LIMIT_DELAY_SECONDS: '2.0'
+        run: |
+          ARGS=""
+          if [ "${{ inputs.force_rescan }}" = "true" ]; then
+            ARGS="$ARGS --rescan"
+          fi
+          PYTHONPATH=. python engine/app/jobs/initial_full_discovery_job.py $ARGS
+
+      - name: Generate Ingestion & Coverage Verification Report
+        if: always()
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          PYTHONPATH=. python -c "
+          from engine.app.database.supabase_client import db_client
+          if db_client.is_connected:
+              res = db_client.client.table('examinations').select('id, title, status, application_status, category, state').execute()
+              print(f'=== BACKFILL VERIFICATION REPORT ===')
+              print(f'Total Opportunities in Supabase: {len(res.data)}')
+              by_status = {}
+              by_cat = {}
+              states = set()
+              for r in res.data:
+                  st = r.get('application_status') or 'unknown'
+                  by_status[st] = by_status.get(st, 0) + 1
+                  cat = r.get('category') or 'unknown'
+                  by_cat[cat] = by_cat.get(cat, 0) + 1
+                  if r.get('state'):
+                      states.add(r.get('state'))
+              print('\nBy Status:')
+              for k, v in sorted(by_status.items()):
+                  print(f'  {k}: {v}')
+              print('\nBy Category:')
+              for k, v in sorted(by_cat.items()):
+                  print(f'  {k}: {v}')
+              print(f'\nStates Represented: {len(states)}')
+          "
+

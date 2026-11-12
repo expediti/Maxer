@@ -35,7 +35,11 @@ class DeterministicEligibilityRepository implements EligibilityRepository {
     // -------------------------------------------------------------------------
     // 1. Age Evaluation (Calculated against official cutoff or current date)
     // -------------------------------------------------------------------------
-    final cutoffDate = examination.importantDates['Application Deadline'] ?? DateTime.now();
+    final cutoffDate = examination.ageCutoffDate ??
+        examination.applicationEndDate ??
+        examination.importantDates['Age Cutoff Date'] ??
+        examination.importantDates['Application Deadline'] ??
+        DateTime.now();
     final candidateAge = candidate.calculateAge(cutoffDate);
 
     if (candidateAge == null) {

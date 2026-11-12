@@ -1,4 +1,4 @@
-name: Scheduled Opportunity Discovery & Extraction
+name: Scheduled Opportunity Discovery & Daily Verification Engine
 
 on:
   schedule:
@@ -6,17 +6,37 @@ on:
     - cron: '0 1 * * *'
   workflow_dispatch:
     inputs:
+      category:
+        description: 'Filter by specific source category (e.g., central_govt, state_govt, defence, scientific, psu, scholarship, private_sector)'
+        required: false
+        type: string
+        default: ''
+      source:
+        description: 'Filter by specific source slug or ID (e.g., upsc, ssc, isro, rrb, appsc, pmrf)'
+        required: false
+        type: string
+        default: ''
+      limit:
+        description: 'Maximum number of sources to crawl in this execution'
+        required: false
+        type: string
+        default: ''
       force_rescan:
         description: 'Bypass document deduplication cache'
         type: boolean
         required: false
         default: false
 
+# Concurrency policy to prevent overlapping discovery runs
+concurrency:
+  group: rexam-discovery-engine
+  cancel-in-progress: false
+
 jobs:
   discover:
-    name: Crawl & Ingest Indian Opportunities
+    name: Crawl, Extract & Verify Indian Opportunities
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 60
 
     steps:
       - name: Checkout Codebase
@@ -34,7 +54,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r engine/requirements.txt
 
-      - name: Execute Discovery & Extraction Pipeline
+      - name: Execute Daily Discovery Pipeline
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
@@ -44,13 +64,28 @@ jobs:
           ENVIRONMENT: 'production'
           RATE_LIMIT_DELAY_SECONDS: '2.0'
         run: |
-          python -m engine.app.jobs.discovery_job
+          ARGS=""
+          if [ -n "${{ inputs.category }}" ]; then
+            ARGS="$ARGS --category '${{ inputs.category }}'"
+          fi
+          if [ -n "${{ inputs.source }}" ]; then
+            ARGS="$ARGS --source '${{ inputs.source }}'"
+          fi
+          if [ -n "${{ inputs.limit }}" ]; then
+            ARGS="$ARGS --limit ${{ inputs.limit }}"
+          fi
+          if [ "${{ inputs.force_rescan }}" = "true" ]; then
+            ARGS="$ARGS --rescan"
+          fi
+
+          eval "python -m engine.app.jobs.discovery_job $ARGS"
 
       - name: Upload Run Diagnostics on Failure
         if: failure()
         uses: actions/upload-artifact@v4
         with:
           name: crawler-failure-diagnostics
-          path: /tmp/rexam_downloads/
+          path: |
+            /tmp/rexam_downloads/
+            /tmp/rexam_discovery_checkpoint.json
           retention-days: 7
-
