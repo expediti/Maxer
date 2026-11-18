@@ -36,6 +36,10 @@ from engine.app.downloading.downloader import downloader
 from engine.app.extraction.pdf_extractor import pdf_extractor
 from engine.app.ai.cloudflare_ai import cloudflare_ai_client
 from engine.app.verification.verifier import verifier
+from engine.app.verification.gemini_verifier import (
+    verify_and_clean_opportunity,
+    stage_and_verify_opportunity,
+)
 from engine.app.verification.url_validator import url_validator
 from engine.app.verification.change_detector import change_detector
 from engine.app.monitoring.health_monitor import health_monitor
@@ -173,6 +177,7 @@ async def run_discovery_pipeline(
 
                 extracted_data: Dict[str, Any] = {}
                 doc_hash = ""
+                raw_source_text = ""
 
                 # Download PDF if available
                 if pdf_url and pdf_url.startswith("http"):
@@ -187,15 +192,46 @@ async def run_discovery_pipeline(
                             continue
 
                         pdf_content = pdf_extractor.extract_document(file_path)
+                        raw_source_text = pdf_content.get("text", "")
                         extracted_data = await cloudflare_ai_client.extract_examination_data(
-                            pdf_content.get("text", "")[:8000],
+                            raw_source_text[:8000],
                             {"title": title, "organisation_name": source.organisation_name}
                         )
                 else:
+                    raw_source_text = notice.get("overview") or notice.get("description") or title
                     extracted_data = await cloudflare_ai_client.extract_examination_data(
                         title,
                         {"title": title, "organisation_name": source.organisation_name}
                     )
+
+                # =============================================================
+                # GEMINI 2.5 FLASH VERIFIER & DETERMINISTIC GUARDRAILS
+                # =============================================================
+                gemini_extracted, gemini_errors, is_gemini_verified, clean_gemini = await verify_and_clean_opportunity(
+                    raw_text=raw_source_text or title,
+                    source_url=notice_url,
+                    context={
+                        "title": title,
+                        "organisation_name": source.organisation_name,
+                        "pdf_url": pdf_url,
+                        "application_url": notice.get("application_url") or notice_url,
+                        "source_category": source.source_category,
+                    }
+                )
+
+                # Upsert into public.staging_opportunities
+                staging_info = stage_and_verify_opportunity(
+                    db=db_client,
+                    extracted=gemini_extracted,
+                    validation_errors=gemini_errors,
+                    is_verified=is_gemini_verified,
+                    raw_text=raw_source_text or title,
+                    source_url=notice_url,
+                    source_id=source.id,
+                    organisation_id=source.organisation_slug,
+                    promote_if_valid=False,
+                )
+                staging_id = staging_info.get("staging_id")
 
                 # Verification & Provenance Scoring across 5 stages with 28-field evidence
                 status_str, verification_tier, uncertain_fields, verified_data, field_evidences = verifier.verify_opportunity_record(
@@ -204,6 +240,56 @@ async def run_discovery_pipeline(
                     document_url=pdf_url,
                     existing_record=prev_record,
                 )
+
+                # Integrate verified Gemini fields when available
+                gemini_date_evidences = []
+                if gemini_extracted:
+                    if gemini_extracted.start_date and gemini_extracted.start_date.date:
+                        verified_data["application_opening_date"] = gemini_extracted.start_date.date
+                        if gemini_extracted.start_date.evidence_snippet:
+                            gemini_date_evidences.append({
+                                "date_field": "application_start_date",
+                                "extracted_value": gemini_extracted.start_date.date,
+                                "original_text": gemini_extracted.start_date.evidence_snippet,
+                                "source_url": notice_url,
+                                "extraction_method": "gemini_2_5_flash_structured",
+                                "verification_status": "VERIFIED" if is_gemini_verified else "UNDER_REVIEW",
+                            })
+                    if gemini_extracted.closing_date and gemini_extracted.closing_date.date:
+                        verified_data["application_closing_date"] = gemini_extracted.closing_date.date
+                        if gemini_extracted.closing_date.evidence_snippet:
+                            gemini_date_evidences.append({
+                                "date_field": "application_end_date",
+                                "extracted_value": gemini_extracted.closing_date.date,
+                                "original_text": gemini_extracted.closing_date.evidence_snippet,
+                                "source_url": notice_url,
+                                "extraction_method": "gemini_2_5_flash_structured",
+                                "verification_status": "VERIFIED" if is_gemini_verified else "UNDER_REVIEW",
+                            })
+                    if gemini_extracted.exam_date and gemini_extracted.exam_date.date:
+                        verified_data["examination_date"] = gemini_extracted.exam_date.date
+                        if gemini_extracted.exam_date.evidence_snippet:
+                            gemini_date_evidences.append({
+                                "date_field": "exam_start_date",
+                                "extracted_value": gemini_extracted.exam_date.date,
+                                "original_text": gemini_extracted.exam_date.evidence_snippet,
+                                "source_url": notice_url,
+                                "extraction_method": "gemini_2_5_flash_structured",
+                                "verification_status": "VERIFIED" if is_gemini_verified else "UNDER_REVIEW",
+                            })
+                    if gemini_extracted.vacancies is not None:
+                        verified_data["vacancies"] = gemini_extracted.vacancies
+                    if gemini_extracted.salary_or_stipend:
+                        verified_data["salary_or_pay_scale"] = gemini_extracted.salary_or_stipend
+                    if gemini_extracted.fee_details:
+                        verified_data["application_fee"] = gemini_extracted.fee_details
+
+                if is_gemini_verified:
+                    verification_tier = "VERIFIED"
+                    status_str = "published"
+                elif gemini_errors:
+                    logger.warning(f"Guardrail errors on {title}: {gemini_errors}")
+                    uncertain_fields.extend(gemini_errors)
 
                 # Validate application URL with URLValidator
                 app_url_res = await url_validator.validate_url_async(notice_url)
@@ -303,6 +389,20 @@ async def run_discovery_pipeline(
                 if exam_id and exam_id != "exam-mock-id":
                     # Persist field-level evidence & provenance records
                     db_client.upsert_field_evidence(exam_id, field_evidences)
+                    if gemini_date_evidences:
+                        db_client.upsert_date_evidence(exam_id, gemini_date_evidences)
+
+                    # Update staging opportunity promotion status if staged
+                    if staging_id and db_client.is_connected and db_client.client:
+                        try:
+                            db_client.client.table("staging_opportunities").update({
+                                "promoted_to_production": True,
+                                "promoted_at": datetime.now(timezone.utc).isoformat(),
+                                "production_examination_id": exam_id,
+                                "verification_status": "PROMOTED",
+                            }).eq("id", staging_id).execute()
+                        except Exception as stg_err:
+                            logger.debug(f"Could not update staging promotion status: {stg_err}")
                     # Upsert Dates
                     db_client.upsert_examination_dates(exam_id, {
                         "application_opening_date": final_opening,

@@ -1,4 +1,5 @@
 import logging
+from datetime import datetime, timezone
 from typing import Optional, Dict, Any, List
 from engine.app.config.settings import settings
 
@@ -535,5 +536,129 @@ class DatabaseClient:
         except Exception as e:
             logger.error(f"Error updating examination verification result for {exam_id}: {e}")
             return False
+
+    def upsert_staging_opportunity(self, staging_data: Dict[str, Any]) -> Optional[str]:
+        """
+        Upserts an opportunity into public.staging_opportunities before reflection
+        to user-facing examination tables.
+        """
+        if not self.is_connected or not self.client:
+            slug = staging_data.get("slug", "mock-slug")
+            logger.info(f"[Dry-run] Upsert staging opportunity: {staging_data.get('title')} (slug: {slug})")
+            return f"staging-mock-{slug}"
+
+        payload = dict(staging_data)
+        # Ensure UUID fields are valid or None
+        for key in ("source_id", "organisation_id", "production_examination_id"):
+            if key in payload:
+                val = str(payload[key]) if payload[key] else ""
+                if len(val) != 36 or val.startswith("source-") or val.startswith("org-"):
+                    payload[key] = None
+
+        try:
+            res = self.client.table("staging_opportunities").upsert(payload, on_conflict="slug").execute()
+            if res.data:
+                return res.data[0]["id"]
+        except Exception as e:
+            logger.error(f"Error upserting staging opportunity {payload.get('slug')}: {e}")
+        return None
+
+    def promote_staging_opportunity_to_production(self, staging_id_or_slug: str) -> Optional[str]:
+        """
+        Promotes a verified staging opportunity into the production examinations,
+        examination_dates, and opportunity_date_evidence tables.
+        """
+        if not self.is_connected or not self.client:
+            logger.info(f"[Dry-run] Promoted staging opportunity {staging_id_or_slug} to production")
+            return f"exam-mock-{staging_id_or_slug}"
+
+        try:
+            # Query staging record
+            query = self.client.table("staging_opportunities").select("*")
+            if len(staging_id_or_slug) == 36 and "-" in staging_id_or_slug:
+                query = query.eq("id", staging_id_or_slug)
+            else:
+                query = query.eq("slug", staging_id_or_slug)
+
+            res = query.maybe_single().execute()
+            stg = res.data if res else None
+            if not stg:
+                logger.error(f"Staging opportunity {staging_id_or_slug} not found for promotion.")
+                return None
+
+            if not stg.get("is_verified"):
+                logger.warning(f"Cannot promote unverified staging opportunity {stg.get('slug')}")
+                return None
+
+            extracted = stg.get("extracted_data") or {}
+
+            # Prepare production payload for examinations table
+            exam_payload = {
+                "slug": stg.get("slug"),
+                "title": stg.get("title"),
+                "name": stg.get("title"),
+                "organisation_id": stg.get("organisation_id"),
+                "source_id": stg.get("source_id"),
+                "status": "published",
+                "verification_status": "VERIFIED",
+                "verification_tier": "VERIFIED",
+                "is_confirmed": True,
+                "application_url": stg.get("application_url"),
+                "official_application_url": stg.get("application_url"),
+                "notification_url": stg.get("official_notification_url"),
+                "official_notification_url": stg.get("official_notification_url"),
+                "source_url": stg.get("source_url"),
+                "application_open_date": stg.get("start_date"),
+                "application_close_date": stg.get("closing_date"),
+                "examination_date": stg.get("exam_date"),
+                "vacancies": extracted.get("vacancies"),
+                "salary_or_pay_scale": extracted.get("salary_or_stipend"),
+                "overview": extracted.get("eligibility_summary") or stg.get("title"),
+                "last_verified_at": datetime.now(timezone.utc).isoformat(),
+            }
+
+            prod_exam_id = self.upsert_examination(exam_payload)
+            if prod_exam_id:
+                # Upsert structured dates
+                self.upsert_examination_dates(prod_exam_id, {
+                    "notification_date": stg.get("notification_date"),
+                    "application_start_date": stg.get("start_date"),
+                    "application_end_date": stg.get("closing_date"),
+                    "correction_start_date": stg.get("correction_start_date"),
+                    "correction_end_date": stg.get("correction_end_date"),
+                    "admit_card_date": stg.get("admit_card_date"),
+                    "exam_start_date": stg.get("exam_date"),
+                    "exam_end_date": stg.get("exam_end_date"),
+                    "result_date": stg.get("result_date"),
+                })
+
+                # Upsert field evidence quotes
+                date_evidences = []
+                date_evidence_map = stg.get("date_evidence") or {}
+                for field_name, ev in date_evidence_map.items():
+                    if isinstance(ev, dict) and ev.get("evidence_snippet"):
+                        date_evidences.append({
+                            "date_field": field_name,
+                            "extracted_value": ev.get("date"),
+                            "original_text": ev.get("evidence_snippet"),
+                            "source_url": stg.get("source_url") or stg.get("official_notification_url") or "",
+                            "extraction_method": "gemini_2_5_flash_structured",
+                            "verification_status": "VERIFIED",
+                        })
+                if date_evidences:
+                    self.upsert_date_evidence(prod_exam_id, date_evidences)
+
+                # Mark staging opportunity as promoted
+                self.client.table("staging_opportunities").update({
+                    "promoted_to_production": True,
+                    "promoted_at": datetime.now(timezone.utc).isoformat(),
+                    "production_examination_id": prod_exam_id,
+                    "verification_status": "PROMOTED",
+                }).eq("id", stg["id"]).execute()
+
+                return prod_exam_id
+        except Exception as e:
+            logger.error(f"Error promoting staging opportunity {staging_id_or_slug}: {e}")
+        return None
 
 db_client = DatabaseClient()

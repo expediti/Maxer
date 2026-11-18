@@ -7,6 +7,10 @@ class Settings(BaseSettings):
     SUPABASE_URL: str = Field(default=os.getenv("SUPABASE_URL", ""))
     SUPABASE_SERVICE_ROLE_KEY: str = Field(default=os.getenv("SUPABASE_SERVICE_ROLE_KEY", ""))
 
+    # Gemini 2.5 Flash Verification configuration
+    GEMINI_API_KEY: str = Field(default=os.getenv("GEMINI_API_KEY", ""))
+    GEMINI_MODEL: str = Field(default=os.getenv("GEMINI_MODEL", "gemini-2.5-flash"))
+
     # Cloudflare Workers AI configuration
     CLOUDFLARE_ACCOUNT_ID: str = Field(default=os.getenv("CLOUDFLARE_ACCOUNT_ID", ""))
     CLOUDFLARE_API_TOKEN: str = Field(default=os.getenv("CLOUDFLARE_API_TOKEN", ""))
