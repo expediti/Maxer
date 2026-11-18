@@ -84,7 +84,7 @@ def test_deterministic_guardrails_pass_valid_record():
     assert clean["date_evidence"]["start_date"]["verified_substring"] is True
 
 
-def test_deterministic_guardrails_rejects_inverted_dates():
+def test_deterministic_guardrails_omits_inverted_dates_preserves_profile():
     raw_source = "Opening date: 15-05-2026. Closing date: 15-04-2026."
     extracted = OpportunityExtracted(
         title="Flawed Dates Exam",
@@ -95,11 +95,15 @@ def test_deterministic_guardrails_rejects_inverted_dates():
     )
 
     errors, is_verified, clean = validate_deterministic_guardrails(extracted, raw_source, "https://psc.state.gov.in")
+    # Date error flagged, but opportunity profile is preserved!
     assert is_verified is False
-    assert any("strictly before" in err.lower() for err in errors)
+    assert clean["title"] == "Flawed Dates Exam"
+    # Conflicting date was omitted/cleared
+    assert extracted.closing_date.date is None
+    assert any("precede start date" in err.lower() for err in errors)
 
 
-def test_deterministic_guardrails_detects_hallucinated_evidence_snippet():
+def test_deterministic_guardrails_detects_and_omits_hallucinated_evidence_snippet():
     raw_source = "Staff Selection Commission Combined Graduate Level Examination 2026 notice will be released soon."
     extracted = OpportunityExtracted(
         title="SSC CGL 2026",
@@ -112,8 +116,68 @@ def test_deterministic_guardrails_detects_hallucinated_evidence_snippet():
     )
 
     errors, is_verified, clean = validate_deterministic_guardrails(extracted, raw_source, "https://ssc.gov.in")
+    # Date error flagged, but job profile is preserved!
     assert is_verified is False
+    assert clean["title"] == "SSC CGL 2026"
+    # The hallucinated date is omitted/nullified
+    assert extracted.start_date.date is None
     assert any("not found verbatim in source text" in err for err in errors)
+
+
+def test_deterministic_guardrails_preserves_opportunity_with_missing_dates():
+    raw_source = (
+        "NATIONAL SCHOLARSHIP PORTAL NOTICE: Post-Matric Scholarship Scheme for 2026-2027.\n"
+        "Applications are invited from eligible students across India.\n"
+        "Official schedule of application opening and closing will be notified later."
+    )
+    extracted = OpportunityExtracted(
+        title="Post-Matric Scholarship Scheme 2026",
+        organisation_name="Ministry of Social Justice",
+        opportunity_type="scholarship",
+        start_date=None,
+        closing_date=None,
+        exam_date=None,
+        application_url="https://scholarships.gov.in",
+    )
+
+    errors, is_verified, clean = validate_deterministic_guardrails(extracted, raw_source, "https://scholarships.gov.in")
+    assert is_verified is True
+    assert len(errors) == 0
+    assert clean["title"] == "Post-Matric Scholarship Scheme 2026"
+    assert clean["start_date"] is None
+    assert clean["closing_date"] is None
+
+
+def test_stage_and_verify_opportunity_preserves_jobs_with_missing_dates():
+    mock_db = MagicMock()
+    mock_db.upsert_staging_opportunity.return_value = "stage-uuid-nodates"
+    mock_db.promote_staging_opportunity_to_production.return_value = "exam-uuid-nodates"
+
+    extracted = OpportunityExtracted(
+        title="DRDO Research Fellowship 2026",
+        organisation_name="DRDO",
+        start_date=None,
+        closing_date=None,
+        application_url="https://drdo.gov.in/careers",
+    )
+
+    raw_text = "DRDO invites applications for Junior Research Fellow. Schedule will be published in due course."
+
+    res = stage_and_verify_opportunity(
+        db=mock_db,
+        extracted=extracted,
+        validation_errors=[],
+        is_verified=True,
+        raw_text=raw_text,
+        source_url="https://drdo.gov.in",
+        promote_if_valid=True,
+    )
+
+    assert res["is_verified"] is True
+    assert res["promoted_to_production"] is True
+    assert res["production_id"] == "exam-uuid-nodates"
+    assert mock_db.upsert_staging_opportunity.called
+    assert mock_db.promote_staging_opportunity_to_production.called
 
 
 def test_deterministic_guardrails_rejects_invalid_url():
@@ -233,7 +297,7 @@ def test_stage_and_verify_opportunity_unverified_quarantine():
         is_verified=False,
         raw_text="No dates here.",
         source_url="https://example.com",
-        promote_if_valid=True,
+        promote_if_valid=False,
     )
 
     assert res["is_verified"] is False

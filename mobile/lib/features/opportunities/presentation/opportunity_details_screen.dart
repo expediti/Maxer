@@ -492,11 +492,13 @@ class OpportunityDetailsScreen extends ConsumerWidget {
                   ),
                   const SizedBox(height: AppDimensions.space16),
 
-                  // Important Dates: Visually Structured Timeline
-                  _buildSectionHeader(context, 'Official Schedule & Deadlines', LucideIcons.calendar),
-                  const SizedBox(height: AppDimensions.space8),
-                  _buildStructuredTimeline(context, opportunity),
-                  const SizedBox(height: AppDimensions.space20),
+                  // Important Dates: Visually Structured Timeline (conditionally displayed if dates exist)
+                  if (opportunity.hasDates) ...[
+                    _buildSectionHeader(context, 'Official Schedule & Deadlines', LucideIcons.calendar),
+                    const SizedBox(height: AppDimensions.space8),
+                    _buildStructuredTimeline(context, opportunity),
+                    const SizedBox(height: AppDimensions.space20),
+                  ],
 
                   // Statutory Eligibility Criteria
                   _buildSectionHeader(context, 'Statutory Eligibility Criteria', LucideIcons.shieldCheck),

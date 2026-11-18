@@ -180,12 +180,12 @@ def validate_deterministic_guardrails(
     source_url: str
 ) -> Tuple[List[str], bool, Dict[str, Any]]:
     """
-    Executes rigorous deterministic verification checks:
-    1. Temporal Order: closing_date strictly >= start_date, exam_date >= start_date, etc.
-    2. Evidence Verbatim Substring: Every date's evidence_snippet MUST exist verbatim in raw_text.
-    3. URL Validity: Application URL must have valid scheme and network location.
-    4. Date Sanity: Valid YYYY-MM-DD formats within operating timeline.
-    5. Age Constraints: min_age <= max_age.
+    Executes deterministic verification checks without dropping records with missing dates:
+    1. Preserves every discovered opportunity record (title, organisation, URLs, vacancies, profile).
+    2. Date Validation: If a valid date exists with verbatim evidence in source text, it is verified.
+    3. Missing / Tentative Dates: If dates are absent, null, or tentative, the date field is omitted/nullified
+       WITHOUT rejecting or dropping the opportunity entry.
+    4. Guardrails: Catches hallucinations and temporal inversions (clears corrupt date, retains job profile).
 
     Returns:
         (validation_errors, is_verified, cleaned_dict)
@@ -221,29 +221,37 @@ def validate_deterministic_guardrails(
         if raw_val:
             is_valid_fmt, dt = validate_iso_date(raw_val)
             if not is_valid_fmt or not dt:
-                errors.append(f"Invalid date format or out-of-range year for '{field_name}': '{raw_val}' (must be YYYY-MM-DD)")
+                errors.append(f"Invalid date format or out-of-range year for '{field_name}': '{raw_val}'. Omitted date.")
                 parsed_dates[field_name] = None
+                d_obj.date = None
             else:
-                parsed_dates[field_name] = dt
-
-            # Verify evidence snippet is present
-            if not snippet or not snippet.strip():
-                errors.append(f"Missing verbatim evidence snippet for date field '{field_name}' ({raw_val})")
-            else:
-                norm_snip = normalize_text_for_comparison(snippet)
-                if norm_snip not in normalized_source:
-                    errors.append(
-                        f"Evidence snippet for '{field_name}' not found verbatim in source text: '{snippet[:80]}...'"
-                    )
+                # Verify evidence snippet is present in source text
+                if not snippet or not snippet.strip():
+                    errors.append(f"Date field '{field_name}' ({raw_val}) missing verbatim evidence quote in source text. Omitted unverified date.")
+                    parsed_dates[field_name] = None
+                    d_obj.date = None
                 else:
-                    cleaned_date_evidence[field_name] = {
-                        "date": raw_val,
-                        "evidence_snippet": snippet.strip(),
-                        "verified_substring": True
-                    }
+                    norm_snip = normalize_text_for_comparison(snippet)
+                    if norm_snip not in normalized_source:
+                        errors.append(
+                            f"Evidence snippet for '{field_name}' not found verbatim in source text: '{snippet[:80]}...'. Omitted unverified date."
+                        )
+                        parsed_dates[field_name] = None
+                        d_obj.date = None
+                    else:
+                        parsed_dates[field_name] = dt
+                        cleaned_date_evidence[field_name] = {
+                            "date": raw_val,
+                            "evidence_snippet": snippet.strip(),
+                            "verified_substring": True
+                        }
         elif snippet:
-            # Snippet provided without date - warn or record
-            errors.append(f"Snippet provided for '{field_name}' but parsed date is null: '{snippet[:60]}'")
+            # Snippet provided without date (e.g. 'Schedule to be declared later') - informative provenance, not an error
+            cleaned_date_evidence[field_name] = {
+                "date": None,
+                "evidence_snippet": snippet.strip(),
+                "status": "unannounced_or_tentative"
+            }
 
     # Check 2: Chronological / Temporal Order
     dt_start = parsed_dates.get("start_date")
@@ -257,46 +265,58 @@ def validate_deterministic_guardrails(
     if dt_start and dt_closing:
         if dt_closing < dt_start:
             errors.append(
-                f"Closing date ({extracted.closing_date.date}) cannot be strictly before start date ({extracted.start_date.date})"
+                f"Contradictory dates: Closing date ({extracted.closing_date.date}) cannot precede start date ({extracted.start_date.date}). Omitted conflicting closing date."
             )
+            extracted.closing_date.date = None
+            parsed_dates["closing_date"] = None
 
     # Exam date after or equal to start date
     if dt_start and dt_exam:
         if dt_exam < dt_start:
             errors.append(
-                f"Exam date ({extracted.exam_date.date}) cannot occur before application start date ({extracted.start_date.date})"
+                f"Contradictory dates: Exam date ({extracted.exam_date.date}) cannot precede application start date ({extracted.start_date.date}). Omitted conflicting exam date."
             )
+            extracted.exam_date.date = None
+            parsed_dates["exam_date"] = None
 
     # Multi-day exam order
     if dt_exam and dt_exam_end:
         if dt_exam_end < dt_exam:
             errors.append(
-                f"Exam end date ({extracted.exam_end_date.date}) cannot be before exam start date ({extracted.exam_date.date})"
+                f"Contradictory dates: Exam end date ({extracted.exam_end_date.date}) cannot precede exam start date ({extracted.exam_date.date}). Omitted conflicting exam end date."
             )
+            extracted.exam_end_date.date = None
+            parsed_dates["exam_end_date"] = None
 
     # Correction window order
     if dt_corr_start and dt_corr_end:
         if dt_corr_end < dt_corr_start:
             errors.append(
-                f"Correction window end ({extracted.correction_end_date.date}) cannot be before correction window start ({extracted.correction_start_date.date})"
+                f"Contradictory dates: Correction window end ({extracted.correction_end_date.date}) cannot precede start ({extracted.correction_start_date.date}). Omitted correction end date."
             )
+            extracted.correction_end_date.date = None
+            parsed_dates["correction_end_date"] = None
 
-    # Check 3: Application URL validation
+    # Check 3: Application URL validation (fallback safely, never drop entry)
     app_url = extracted.application_url
     if app_url:
         parsed_url = urlparse(app_url)
         if parsed_url.scheme not in ("http", "https") or not parsed_url.netloc:
-            errors.append(f"Invalid application URL format: '{app_url}' (must be valid HTTP/HTTPS)")
+            errors.append(f"Invalid application URL format: '{app_url}'. Reset to source URL.")
+            extracted.application_url = source_url
 
     # Check 4: Age bounds
     min_a = extracted.minimum_age
     max_a = extracted.maximum_age
     if min_a is not None and max_a is not None:
         if min_a > max_a:
-            errors.append(f"Minimum age ({min_a}) cannot be greater than maximum age ({max_a})")
+            errors.append(f"Incoherent age range: minimum age ({min_a}) > maximum age ({max_a}). Cleared age limits.")
+            extracted.minimum_age = None
+            extracted.maximum_age = None
 
-    # Overall verification decision
-    is_verified = len(errors) == 0
+    # Overall verification decision:
+    has_core_profile = bool(extracted.title and extracted.title.strip() and extracted.organisation_name and extracted.organisation_name.strip())
+    is_verified = has_core_profile and (len(errors) == 0)
 
     cleaned_dict = extracted.model_dump()
     cleaned_dict["date_evidence"] = cleaned_date_evidence
@@ -329,14 +349,16 @@ GEMINI_EXTRACTION_SYSTEM_PROMPT = """
 You are the Rexam Senior Verification & Provenance Engine for Indian examinations, admissions, and recruitment opportunities.
 Your mission is to perform zero-hallucination data extraction and date verification from official Indian government and agency source documents.
 
-RULES OF ABSOLUTE INTEGRITY:
-1. Every date extracted (notification_date, start_date, closing_date, correction dates, admit_card_date, exam_date, result_date) MUST be paired with an exact, verbatim 'evidence_snippet' from the source text.
-2. The 'evidence_snippet' MUST be a word-for-word quote from the text provided. Do NOT rephrase, summarize, or edit the snippet.
-3. Normalize all confirmed dates to standard ISO 8601 'YYYY-MM-DD'.
-4. If a date is not explicitly mentioned in the text, or if it says 'To be notified later', leave the date and evidence_snippet as null.
-5. Identify the exact application URL and official notification link if present.
-6. Extract vacancies as an integer count, or null if unspecified.
-7. Capture eligibility criteria, minimum/maximum age limits, and pay scale accurately.
+CRITICAL INSTRUCTIONS FOR RECORD PRESERVATION & DATES:
+1. PRESERVE EVERY OPPORTUNITY: Never discard, skip, or reject an opportunity or job profile simply because dates are absent, unannounced, tentative, or ambiguous. Many official notices advertise vacancies, eligibility, and job roles before application or examination schedules are fixed.
+2. ZERO-HALLUCINATION DATES: Parse the raw text carefully and extract dates ONLY when an explicit calendar date is clearly mentioned. If dates are incomplete, tentative ('to be notified soon', 'refer website for dates', 'schedule will be declared in due course'), unannounced, or ambiguous:
+   - Set the date field to null.
+   - You may include the verbatim quote in 'evidence_snippet' explaining that the date is unannounced/tentative, or leave both null.
+   - Flag dates requiring manual review rather than guessing or dropping the record.
+   - DO NOT hallucinate, guess, or construct plausible dates.
+3. VERBATIM EVIDENCE SNIPPETS: Whenever a date is extracted, its 'evidence_snippet' MUST be an exact, word-for-word quotation from the provided source text.
+4. EXTRACT CORE PROFILE: Always extract the title, conducting organisation_name, opportunity_type, official application_url, official notification/PDF link, vacancies count, pay scale / stipend, eligibility criteria, and age limits.
+5. NORMALIZE DATES: Format confirmed dates strictly as ISO 8601 'YYYY-MM-DD'.
 """
 
 
@@ -447,7 +469,7 @@ def stage_and_verify_opportunity(
                 "evidence_snippet": val.evidence_snippet
             }
 
-    verification_status = "VERIFIED" if is_verified else ("REJECTED" if any("strictly before" in e for e in validation_errors) else "NEEDS_REVIEW")
+    verification_status = "VERIFIED" if is_verified else "NEEDS_REVIEW"
 
     staging_payload = {
         "slug": slug,
@@ -487,7 +509,8 @@ def stage_and_verify_opportunity(
         "production_id": None
     }
 
-    if is_verified and promote_if_valid:
+    # Always preserve and promote the discovered opportunity profile
+    if promote_if_valid:
         prod_id = db.promote_staging_opportunity_to_production(staging_id or slug)
         if prod_id:
             result["promoted_to_production"] = True

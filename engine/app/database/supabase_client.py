@@ -608,11 +608,8 @@ class DatabaseClient:
                 logger.error(f"Staging opportunity {staging_id_or_slug} not found for promotion.")
                 return None
 
-            if not stg.get("is_verified"):
-                logger.warning(f"Cannot promote unverified staging opportunity {stg.get('slug')}")
-                return None
-
             extracted = stg.get("extracted_data") or {}
+            v_tier = "VERIFIED" if stg.get("is_verified") else "PARTIALLY_VERIFIED"
 
             # Prepare production payload for examinations table
             exam_payload = {
@@ -622,8 +619,8 @@ class DatabaseClient:
                 "organisation_id": stg.get("organisation_id"),
                 "source_id": stg.get("source_id"),
                 "status": "published",
-                "verification_status": "VERIFIED",
-                "verification_tier": "VERIFIED",
+                "verification_status": v_tier,
+                "verification_tier": v_tier,
                 "is_confirmed": True,
                 "application_url": stg.get("application_url"),
                 "official_application_url": stg.get("application_url"),

@@ -176,6 +176,21 @@ class Examination {
   final String applicationStatus;
   final Map<String, dynamic> evidence;
 
+  /// Returns true if this opportunity has at least one confirmed/valid date.
+  /// If false, date fields are omitted from display rather than dropping the record.
+  bool get hasDates =>
+      notificationDate != null ||
+      applicationStartDate != null ||
+      applicationEndDate != null ||
+      correctionStartDate != null ||
+      correctionEndDate != null ||
+      admitCardDate != null ||
+      examStartDate != null ||
+      examEndDate != null ||
+      resultDate != null ||
+      applicationDeadline != null ||
+      importantDates.values.any((d) => d != null);
+
   const Examination({
     required this.id,
     this.slug = '',

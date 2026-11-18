@@ -354,48 +354,49 @@ class OpportunityCard extends ConsumerWidget {
               Divider(color: context.themeBorder, height: 1),
               const SizedBox(height: AppDimensions.space10),
 
-              // Footer: Deadline / Countdown and Status Badge
+              // Footer: Deadline / Countdown (conditionally displayed if date exists) and Status Badge
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Row(
-                    children: [
-                      Icon(
-                        LucideIcons.clock,
-                        size: 13,
-                        color: isClosing ? AppColors.warning : AppColors.mutedText,
-                      ),
-                      const SizedBox(width: 5),
-                      Text(
-                        opportunity.applicationDeadline != null
-                            ? DateFormatter.formatDeadline(opportunity.applicationDeadline!)
-                            : 'Date not announced',
-                        style: AppTypography.caption.copyWith(
-                          color: isClosing ? AppColors.warning : AppColors.secondaryText,
-                          fontWeight: isClosing ? FontWeight.w700 : FontWeight.w500,
-                          fontSize: 11.5,
+                  if (opportunity.applicationDeadline != null)
+                    Row(
+                      children: [
+                        Icon(
+                          LucideIcons.clock,
+                          size: 13,
+                          color: isClosing ? AppColors.warning : AppColors.mutedText,
                         ),
-                      ),
-                      if (daysLeft != null && daysLeft > 0 && daysLeft <= 14) ...[
-                        const SizedBox(width: 6),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-                          decoration: BoxDecoration(
-                            color: AppColors.warningBg,
-                            borderRadius: BorderRadius.circular(3),
+                        const SizedBox(width: 5),
+                        Text(
+                          DateFormatter.formatDeadline(opportunity.applicationDeadline!),
+                          style: AppTypography.caption.copyWith(
+                            color: isClosing ? AppColors.warning : AppColors.secondaryText,
+                            fontWeight: isClosing ? FontWeight.w700 : FontWeight.w500,
+                            fontSize: 11.5,
                           ),
-                          child: Text(
-                            '$daysLeft d left',
-                            style: const TextStyle(
-                              color: AppColors.warning,
-                              fontSize: 10,
-                              fontWeight: FontWeight.w700,
+                        ),
+                        if (daysLeft != null && daysLeft > 0 && daysLeft <= 14) ...[
+                          const SizedBox(width: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                            decoration: BoxDecoration(
+                              color: AppColors.warningBg,
+                              borderRadius: BorderRadius.circular(3),
+                            ),
+                            child: Text(
+                              '$daysLeft d left',
+                              style: const TextStyle(
+                                color: AppColors.warning,
+                                fontSize: 10,
+                                fontWeight: FontWeight.w700,
+                              ),
                             ),
                           ),
-                        ),
+                        ],
                       ],
-                    ],
-                  ),
+                    )
+                  else
+                    const SizedBox.shrink(),
 
                   StatusBadge(
                     status: status,

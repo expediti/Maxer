@@ -335,7 +335,20 @@ async def run_discovery_pipeline(
                     total_changes_detected += len(detected_changes)
                     logger.info(f"Detected {len(detected_changes)} change(s) in {title}")
 
-                # Upsert into examinations table
+                # Dynamic Application Lifecycle Status based on verified dates (omitted dates preserve the opportunity)
+                now_date = datetime.now(timezone.utc).date().isoformat()
+                if final_closing and final_closing < now_date:
+                    computed_app_status = "closed"
+                elif final_opening and final_opening > now_date:
+                    computed_app_status = "upcoming"
+                elif final_opening and final_closing and final_opening <= now_date <= final_closing:
+                    computed_app_status = "open"
+                elif final_closing and final_closing >= now_date:
+                    computed_app_status = "open"
+                else:
+                    computed_app_status = notice.get("application_status") or "awaiting_notification"
+
+                # Upsert into examinations table (Preserve every discovered opportunity profile)
                 exam_payload = {
                     "slug": exam_slug,
                     "title": verified_data.get("title") or title,
@@ -346,7 +359,8 @@ async def run_discovery_pipeline(
                     "state": notice.get("state") or source.state,
                     "location": notice.get("location", "All India"),
                     "is_central_government": notice.get("is_central_government", True),
-                    "status": verified_data.get("status", "published"),
+                    "status": "published",
+                    "application_status": computed_app_status,
                     "verification_status": status_str,
                     "verification_tier": verification_tier,
                     "is_application_url_verified": app_url_res.validation_status in ("VERIFIED", "REDIRECTED_VERIFIED"),
