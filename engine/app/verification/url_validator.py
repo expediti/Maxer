@@ -82,6 +82,14 @@ class URLValidationResult:
         self.is_https = is_https
         self.last_checked_at = datetime.now(timezone.utc).isoformat()
 
+    @property
+    def is_valid(self) -> bool:
+        return self.validation_status in (URLValidationStatus.VERIFIED, URLValidationStatus.REDIRECTED_VERIFIED)
+
+    @property
+    def final_url(self) -> str:
+        return self.final_redirect_url or self.validated_url or self.original_url
+
     def to_dict(self) -> Dict[str, Any]:
         return {
             "original_url": self.original_url,
@@ -380,6 +388,14 @@ class OfficialURLValidator:
             redirect_chain=redirect_chain,
             is_https=final_parsed.scheme == "https",
         )
+
+    async def validate_url_async(
+        self,
+        raw_url: str,
+        base_source_url: Optional[str] = None
+    ) -> URLValidationResult:
+        import asyncio
+        return await asyncio.to_thread(self.validate_url, raw_url, base_source_url)
 
 url_validator = OfficialURLValidator()
 

@@ -419,9 +419,31 @@ class DatabaseClient:
             logger.info(f"[Dry-run] URL validation for {url_val_data.get('url')}: {url_val_data.get('validation_status')}")
             return
 
+        from urllib.parse import urlparse
+        raw_url = url_val_data.get("url") or url_val_data.get("original_url") or ""
+        if not raw_url:
+            return
+        parsed = urlparse(raw_url)
+        domain = url_val_data.get("domain") or parsed.netloc or "unknown"
+        norm_url = url_val_data.get("normalized_url") or url_val_data.get("validated_url") or raw_url
+        final_u = url_val_data.get("final_url") or url_val_data.get("final_redirect_url") or norm_url
+
+        payload = {
+            "url": raw_url,
+            "normalized_url": norm_url,
+            "domain": domain,
+            "status_code": url_val_data.get("status_code") or url_val_data.get("http_status"),
+            "validation_status": str(url_val_data.get("validation_status") or "NEEDS_REVIEW"),
+            "redirect_chain": url_val_data.get("redirect_chain") or [],
+            "final_url": final_u,
+            "is_https": url_val_data.get("is_https", raw_url.startswith("https")),
+            "last_checked_at": url_val_data.get("last_checked_at") or datetime.now(timezone.utc).isoformat(),
+            "error_message": url_val_data.get("error_message"),
+        }
+
         try:
             self.client.table("url_validations").upsert(
-                url_val_data,
+                payload,
                 on_conflict="url"
             ).execute()
         except Exception as e:
