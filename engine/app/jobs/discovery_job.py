@@ -127,6 +127,15 @@ async def run_discovery_pipeline(
 
     logger.info(f"Targeting {len(sources)} registered official source(s).")
 
+    # 0. Synchronize Master Opportunity Catalogue to ensure all 98 benchmarks exist
+    try:
+        from engine.app.discovery.catalogue_expansion import seed_master_catalogue
+        logger.info("Synchronizing Master Opportunity Catalogue (98 Indian recruitment programmes)...")
+        cat_result = seed_master_catalogue(dry_run=False)
+        logger.info(f"Master Catalogue sync completed: {cat_result.get('upserted', 0)} opportunities active.")
+    except Exception as cat_err:
+        logger.warning(f"Catalogue sync notice (continuing discovery): {cat_err}")
+
     completed_checkpoint = set() if force_rescan else load_checkpoint()
     total_discovered = 0
     total_processed = 0
@@ -158,7 +167,11 @@ async def run_discovery_pipeline(
         notices: List[Dict[str, Any]] = []
         try:
             crawler = get_crawler_for_source(source)
-            notices = await crawler.discover_notices()
+            try:
+                notices = await asyncio.wait_for(crawler.discover_notices(), timeout=25.0)
+            except asyncio.TimeoutError:
+                logger.warning(f"Timeout crawling {source.source_name} after 25s. Continuing with next source.")
+                notices = []
             metric.opportunities_discovered = len(notices)
             metric.pages_discovered = 1
             total_discovered += len(notices)
@@ -181,7 +194,11 @@ async def run_discovery_pipeline(
 
                 # Download PDF if available
                 if pdf_url and pdf_url.startswith("http"):
-                    download_res = await downloader.download_file(pdf_url)
+                    download_res = None
+                    try:
+                        download_res = await asyncio.wait_for(downloader.download_file(pdf_url), timeout=15.0)
+                    except Exception as dl_err:
+                        logger.debug(f"Could not download PDF from {pdf_url}: {dl_err}")
                     if download_res:
                         file_path, doc_hash, _ = download_res
                         metric.documents_downloaded += 1
