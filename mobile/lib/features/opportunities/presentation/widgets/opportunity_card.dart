@@ -220,6 +220,25 @@ class OpportunityCard extends ConsumerWidget {
                         ),
                       ),
                     ),
+                  if (opportunity.applicationFee != null)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: context.themeSurfaceElevated,
+                        borderRadius: BorderRadius.circular(AppDimensions.radiusSmall),
+                        border: Border.all(color: context.themeBorder),
+                      ),
+                      child: Text(
+                        opportunity.applicationFee == 0
+                            ? 'Fee: Free'
+                            : 'Fee: ₹${opportunity.applicationFee!.toInt()}',
+                        style: AppTypography.caption.copyWith(
+                          color: context.themeTextMain,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
                   if (opportunity.salaryOrPayScale != null && opportunity.salaryOrPayScale!.isNotEmpty)
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
